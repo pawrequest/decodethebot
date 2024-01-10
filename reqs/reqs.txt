@@ -1,0 +1,5 @@
+
+-e file:.
+-e file:///C:/Users/RYZEN/prdev/redditbot
+-e file:///C:/Users/RYZEN/prdev/backupbot
+-e file:///C:/Users/RYZEN/prdev/episode_scraper

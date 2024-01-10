@@ -1,0 +1,13 @@
+-e file:///C:/Users/RYZEN/prdev/episode_scraper
+sqlmodel
+uvicorn
+fastapi
+pydantic
+python-dotenv
+aiohttp
+loguru
+fastui
+pytest
+pytest-asyncio
+beautifulsoup4
+python-dateutil

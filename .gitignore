@@ -1,0 +1,6 @@
+/data/client_secrets.json
+.env
+/.idea
+/.env
+*.log
+/data/
