@@ -10,22 +10,19 @@ from redditbot.managers import subreddit_cm
 from src.DecodeTheBot.models.reddit_ext import RedditThread
 from src.DecodeTheBot.models.guru import Guru
 from src.DecodeTheBot.models.episode_ext import Episode
+spurious_import = Guru  # protect from ruff
+spurious_import2 = Episode  # protect from ruff
 
 dotenv.load_dotenv()
 
 
-spurious_import = Guru  # protect from ruff
-spurious_import2 = Episode  # protect from ruff
-
 @pytest.fixture(scope="function")
 def test_engine(tmp_path):
-    # Create a test engine, possibly using an in-memory database
     return create_engine(f"sqlite:///{tmp_path}/test.db")
 
 
 @pytest.fixture(scope="function")
 def test_session(test_engine):
-    # Create a session for the test database
     SQLModel.metadata.create_all(test_engine)
     with Session(test_engine) as session:
         yield session
@@ -45,7 +42,7 @@ async def monitor_bot(test_session):
 
 
 @pytest.mark.asyncio
-async def test_montior_bot(monitor_bot):
+async def test_monitor_bot(monitor_bot):
     assert isinstance(monitor_bot, SubredditMonitor)
 
 
@@ -72,13 +69,3 @@ async def test_monitor(test_session):
                 return
 
 
-def test_get_matches(subreddit_monitor):
-    # Test the get_matches method
-    # Provide a submission and check if it correctly identifies matching tags
-    pass
-
-
-def test_database_operations(subreddit_monitor):
-    # Test database operations
-    # Check if the correct entries are made in the database for new submissions and matches
-    pass
