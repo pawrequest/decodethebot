@@ -8,10 +8,11 @@ from typing import List, Optional, TYPE_CHECKING
 
 from sqlmodel import Field, Relationship, SQLModel, select
 
-from .links import GuruEpisodeLink
+from .links import GuruEpisodeLink, RedditThreadGuruLink
 
 if TYPE_CHECKING:
     from .episode_ext import Episode
+    from .reddit_ext import RedditThread
 
     ...
 
@@ -29,7 +30,7 @@ class Guru(GuruBase, table=True):
 
     episodes: List["Episode"] = Relationship(back_populates="gurus", link_model=GuruEpisodeLink)
 
-    # reddit_threads: List["RedditThreadExt"] = Relationship(back_populates="gurus", link_model=RedditThreadGuruLink)
+    reddit_threads: List["RedditThread"] = Relationship(back_populates="gurus", link_model=RedditThreadGuruLink)
     @property
     def interest(self):
         return len(self.episodes) + len(self.reddit_threads)
