@@ -1,4 +1,5 @@
--e file:///C:/Users/RYZEN/prdev/episode_scraper
+-r ./reqs_dev.txt
+-r ./reqs_local.txt
 sqlmodel
 uvicorn
 fastapi
@@ -7,7 +8,5 @@ python-dotenv
 aiohttp
 loguru
 fastui
-pytest
-pytest-asyncio
 beautifulsoup4
 python-dateutil

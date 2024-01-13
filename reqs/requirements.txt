@@ -1,2 +1,5 @@
--r ./reqs.txt
+-r ./reqs_local.txt
 -r ./reqs_dev.txt
+fastapi
+fastui
+uvicorn
