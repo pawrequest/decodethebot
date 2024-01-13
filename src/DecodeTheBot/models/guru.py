@@ -9,6 +9,7 @@ from typing import List, Optional, TYPE_CHECKING
 from sqlmodel import Field, Relationship, SQLModel, select
 
 from .links import GuruEpisodeLink, RedditThreadGuruLink
+from ..ui.mixin import Flex, objects_ui_with
 
 if TYPE_CHECKING:
     from .episode_ext import Episode
@@ -34,8 +35,9 @@ class Guru(GuruBase, table=True):
     @property
     def interest(self):
         return len(self.episodes) + len(self.reddit_threads)
-    # def ui_detail(self) -> Flex:
-    #     return objects_ui_with([self])
+
+    def ui_detail(self) -> Flex:
+        return objects_ui_with([self])
 
 
 def guru_filter_init(guru_name, session, clazz):
