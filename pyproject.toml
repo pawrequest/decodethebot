@@ -30,7 +30,8 @@ dev-dependencies = [
     "httpx",
 ]
 
-
+[tool.ruff]
+line-length = 120
 
 [tool.hatch.metadata]
 allow-direct-references = true

@@ -23,10 +23,10 @@ def get_headers(header_names: list) -> c.Div:
 
 def objects_ui_with(objects: Sequence) -> c.Div:
     try:
-        data = [_object_ui_with(_) for _ in objects]
-        head_names = list(data[0].keys())
+        ui_elements = [_object_ui_with_related(_) for _ in objects]
+        head_names = list(ui_elements[0].keys())
         headers = get_headers(head_names)
-        rows = [Row([_ for _ in o.values()], class_name=ROW) for o in data]
+        rows = [Row([_ for _ in o.values()], class_name=ROW) for o in ui_elements]
         col = Col(components=[headers, *rows])
         return col
     except Exception as e:
@@ -37,7 +37,7 @@ def objects_ui(objects: Sequence, class_name_int="", class_name_ext="") -> c.Div
     try:
         if not objects:
             return empty_div(col=True)
-        rows = [_object_ui(_, class_name_int) for _ in objects]
+        rows = [object_ui(_, class_name_int) for _ in objects]
         # col = Col(components=rows, class_name=class_name_ext)
         col = Col(components=rows)
         return col
@@ -45,31 +45,13 @@ def objects_ui(objects: Sequence, class_name_int="", class_name_ext="") -> c.Div
         logger.error(e)
 
 
-def _object_ui(obj, class_name="") -> Union[c.Div, c.Link]:
+def object_ui(obj, class_name="") -> Union[c.Div, c.Link]:
     if not obj:
         return empty_div(col=True)
     clink = ui_link(title_or_name(obj), slug_or_none(obj))
     return Col(components=[clink], class_name=class_name)
 
 
-# def _object_ui_with(obj: UI_ELEMENT) -> c.Div:
-#     typs = ["gurus", "episodes", "reddit_threads"]
-#     cols = []
-#     headings = []
-#     for typ in typs:
-#         if hasattr(obj, typ):
-#             headings.append(typ)
-#             if res := getattr(obj, typ, None):
-#                 # out[typ] = self.object_ui_self_only(res)
-#                 cols.append(objects_ui(res))
-#             else:
-#                 cols.append(empty_div(col=True))
-#
-#     col = title_column(obj)
-#     cols.insert(1, col)
-#     headings.insert(1, "title")
-#     row = Row(classes=ROW, components=cols)
-#     return row
 
 
 class UIThing(BaseModel):
@@ -78,12 +60,9 @@ class UIThing(BaseModel):
     threads: list[AnyComponent]
 
 
-# def make_flex_grid(rows, columns):
-#     for row in rows:
-#         _row
 
 
-def _object_ui_with(obj) -> dict[str, c.Div]:
+def _object_ui_with_related(obj) -> dict[str, c.Div]:
     typs = ["gurus", "episodes", "reddit_threads"]
     out_d = dict()
     for i, typ in enumerate(typs):
@@ -98,24 +77,6 @@ def _object_ui_with(obj) -> dict[str, c.Div]:
     return out_d
 
 
-# def _object_ui_split(obj) -> c.Div:
-#     cols = []
-#
-#     if hasattr(obj, "gurus"):
-#         cols.append(objects_ui(obj.gurus, class_name_int=GURU_COL))
-#     if hasattr(obj, "episodes"):
-#         cols.append(objects_ui(obj.episodes, class_name_int=EPISODE_COL))
-#     else:
-#         url = url_or_slug(obj)
-#         cols.append(play_column(url))
-#     if hasattr(obj, "reddit_threads"):
-#         red_col = objects_ui(obj.reddit_threads, class_name_int=THREAD_COL)
-#         cols.append(red_col)
-#
-#     col = title_column(obj)
-#     cols.insert(1, col)
-#     row = Row(class_name=ROW, components=cols)
-#     return row
 
 
 def title_column(obj) -> Col:
@@ -164,7 +125,7 @@ def empty_container():
 
 
 def title_or_name(obj) -> str:
-    return getattr(obj, "name", None) or getattr(obj, "title", None)
+    return getattr(obj, "title", None) or getattr(obj, "name", None)
 
 
 def ui_link(title, url, on_click=None, class_name="") -> c.Link:

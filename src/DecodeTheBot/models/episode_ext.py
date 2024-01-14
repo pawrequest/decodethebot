@@ -7,11 +7,10 @@ from sqlmodel import Field, Relationship
 from fastui import components as c
 
 from .links import GuruEpisodeLink, RedditThreadEpisodeLink
-from ..ui.mixin import Flex, _object_ui
+from ..ui.mixin import Flex, object_ui
 
 if TYPE_CHECKING:
     from DecodeTheBot.models.guru import Guru
-    #     ...
     from .reddit_ext import RedditThread
 
 
@@ -31,7 +30,7 @@ class Episode(EpisodeBase, table=True):
         markup = writer.write_one()
         return Flex(
             components=[
-                *(_object_ui(_) for _ in self.gurus),
+                *(object_ui(_) for _ in self.gurus),
                 c.Markdown(text=markup),
             ]
         )

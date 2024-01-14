@@ -4,14 +4,12 @@ from sqlmodel import SQLModel, Session, create_engine
 import pytest
 from asyncpraw.reddit import Subreddit
 
-from redditbot.monitor import SubredditMonitor, submission_to_thread
+from redditbot.monitor import SubredditMonitor
 from redditbot.managers import subreddit_cm
 
-from src.DecodeTheBot.models.reddit_ext import RedditThread
-from src.DecodeTheBot.models.guru import Guru
-from src.DecodeTheBot.models.episode_ext import Episode
-spurious_import = Guru  # protect from ruff
-spurious_import2 = Episode  # protect from ruff
+from src.DecodeTheBot.models.reddit_ext import RedditThread # noqa F401
+from src.DecodeTheBot.models.guru import Guru # noqa F401
+from src.DecodeTheBot.models.episode_ext import Episode # noqa F401
 
 dotenv.load_dotenv()
 

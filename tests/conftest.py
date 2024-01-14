@@ -6,7 +6,9 @@
 # import pytest
 # from asyncpraw import Reddit
 import inspect
+import json
 import re
+from random import randint
 
 import pytest
 from episode_scraper.episode_model import EpisodeBase
@@ -25,11 +27,15 @@ from loguru import logger as _logger
 # from main import app
 #
 from asyncpraw import Reddit
+from pawsupport import get_logger
 from sqlalchemy import StaticPool, create_engine
 from sqlmodel import SQLModel, Session
 
-from src.DecodeTheBot.models.episode_ext import Episode
-from src.DecodeTheBot.core.logger_config import get_logger
+from src.DecodeTheBot.tasks import gurus_from_file
+from src.DecodeTheBot.core.consts import BACKUP_JSON, GURU_NAMES_FILE
+from src.DecodeTheBot.models.episode_ext import Episode  # noqa F401
+from src.DecodeTheBot.models.guru import Guru  # noqa F401
+from src.DecodeTheBot.models.reddit_ext import RedditThread  # noqa F401
 
 
 @pytest.fixture(scope="session")
@@ -38,6 +44,12 @@ def test_session():
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
         yield session
+
+
+@pytest.fixture(scope="session")
+def test_session_with_gurus(test_session):
+    gurus_from_file(test_session, GURU_NAMES_FILE)
+    yield test_session
 
 
 MAIN_URL = "https://decoding-the-gurus.captivate.fm"
@@ -116,17 +128,25 @@ def test_logger(tmp_path):
 #     return res
 #
 #
-# @pytest.fixture(scope="session")
-# def all_episodes_json():
-#     with open(EPISODES_MOD, "r") as f:
-#         return json.load(f)
+@pytest.fixture(scope="session")
+def all_episodes_json():
+    with open(BACKUP_JSON, "r") as f:
+        res = json.load(f)['episode']
+        return [json.loads(_) for _ in res]
+
+
 #
-#
-# @pytest.fixture(scope="function")
-# def random_episode_json(all_episodes_json):
-#     yield all_episodes_json[randint(0, len(all_episodes_json) - 1)]
-#
-#
+@pytest.fixture(scope="function")
+def random_episode(all_episodes_json):
+    res = all_episodes_json[randint(0, len(all_episodes_json) - 1)]
+    return Episode.model_validate(res)
+
+
+@pytest.mark.asyncio
+async def test_ep_json(random_episode):
+    assert isinstance(random_episode, Episode)
+
+
 # @pytest.fixture(scope="function")
 # def random_episode_validated(random_episode_json) -> EpisodeBase:
 #     return EpisodeBase.model_validate(random_episode_json)
