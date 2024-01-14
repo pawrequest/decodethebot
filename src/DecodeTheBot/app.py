@@ -13,16 +13,15 @@ from redditbot import subreddit_cm
 from sqlmodel import Session
 from fastapi.responses import HTMLResponse, PlainTextResponse
 
-from .core.consts import BACKUP_DIR, BACKUP_JSON, BACKUP_SLEEP, RESTORE_FROM_JSON, SUBREDDIT_NAME, \
-    logger, GURU_NAMES_FILE
+from .core.consts import BACKUP_DIR, BACKUP_JSON, BACKUP_SLEEP, GURU_NAMES_FILE, RESTORE_FROM_JSON, \
+    SUBREDDIT_NAME, logger
 from .core.database import create_db, engine_
 from .routers.eps import router as eps_router
 from .routers.guroute import router as guru_router
 from .routers.main import router as main_router
 from .routers.red import router as red_router
 from .routers.forms import router as forms_router
-from .tasks import restore_with_gurus, backup_and_prune, scraper_tasks, monitor_tasks, \
-    gurus_from_file
+from .tasks import backup_and_prune, gurus_from_file, process_queue, q_eps, q_threads
 
 load_dotenv()
 
@@ -44,9 +43,13 @@ async def lifespan(app: FastAPI):
             tasks.append(asyncio.create_task(backup_and_prune(backup_bot, pruner, BACKUP_SLEEP)))
 
             async with ClientSession() as aio_session:
-                tasks.extend(await scraper_tasks(aio_session, session))
+                process_qu = asyncio.Queue()
+                tasks.append(asyncio.create_task(q_eps(aio_session, process_qu)))
+
                 async with subreddit_cm(sub_name=SUBREDDIT_NAME) as subreddit:  # noqa E1120
-                    tasks.extend(await monitor_tasks(session, subreddit))
+                    tasks.append(asyncio.create_task(q_threads(session, subreddit, process_qu)))
+
+                    tasks.append(asyncio.create_task(await process_queue(process_qu, session)))
 
                     yield
                     logger.info('exit backup')

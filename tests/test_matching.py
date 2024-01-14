@@ -25,7 +25,7 @@ async def test_guru_matches_with_matching_title2(test_session_with_gurus: Sessio
 @pytest.mark.asyncio
 async def test_all_matches(test_session_with_gurus: Session, random_episode: Episode):
     logger.info(f"\nmay fail if random ep has no matches: {random_episode}")
-    matches = await name_or_title_matches_(test_session_with_gurus, random_episode, Guru)
+    matches = name_or_title_matches_(test_session_with_gurus, random_episode, Guru)
     assert len(matches) > 0
     assert all(isinstance(match, Guru) for match in matches)
 #
