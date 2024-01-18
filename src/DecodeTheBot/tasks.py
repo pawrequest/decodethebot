@@ -1,21 +1,94 @@
 import asyncio
+from asyncio import Queue
+from dataclasses import dataclass
+from functools import lru_cache
 from typing import TypeVar, Union
 
-from asyncpraw.models import Submission, Subreddit
+from aiohttp import ClientSession
+from asyncpraw.models import Subreddit
 from dotenv import load_dotenv
-from episode_scraper.soups import MainSoup
-from pawsupport import Pruner, SQLModelBot
+from episode_scraper.soups_dc import PodcastSoup
+from pawsupport import Pruner, SQLModelBot, backup_copy_prune, get_hash
 from sqlmodel import Session, select
 
-from .core.consts import GURU_NAMES_FILE, PODCAST_URL, SCRAPER_SLEEP, logger
+from .core.consts import BACKUP_SLEEP, GURU_NAMES_FILE, RESTORE_FROM_JSON, SCRAPER_SLEEP, logger
 from .models.episode_ext import Episode
 from .models.guru import Guru
-from .models.reddit_ext import RedditThread as RedditThread
+from .models.reddit_ext import RedditThread
 from .ui.mixin import title_or_name
 
 load_dotenv()
 
-DB_MODEL_TYPE = TypeVar("DB_MODEL_TYPE", bound=Union[Guru, Episode, RedditThread])
+DB_MODEL = TypeVar("DB_MODEL_TYPE", bound=Union[Guru, Episode, RedditThread])
+
+
+class DTGBot:
+    def __init__(
+        self,
+        session: Session,
+        pruner: Pruner,
+        backup_bot: SQLModelBot,
+        subreddit: Subreddit,
+        queue: Queue,
+        podcast_soup: PodcastSoup,
+        http_session: ClientSession = None,
+    ):
+        self.session = session
+        self.http_session = http_session or ClientSession()
+        self.pruner = pruner
+        self.backup_bot = backup_bot
+        self.subreddit = subreddit
+        self.process_q = queue
+        self.tasks = list()
+        self.podcast_soup = podcast_soup
+
+    async def run(self):
+        logger.info("Initialised")
+        with self.session as session:
+            gurus_from_file(session, GURU_NAMES_FILE)
+            if RESTORE_FROM_JSON:
+                self.backup_bot.restore()
+
+            self.tasks = [
+                asyncio.create_task(backup_copy_prune(self.backup_bot, self.pruner, BACKUP_SLEEP)),
+                asyncio.create_task(self.q_episodes()),
+                # asyncio.create_task(self.q_threads()),
+                asyncio.create_task(await process_queue(self.process_q, session)),
+            ]
+            logger.info("Tasks created")
+            # await asyncio.gather(*self.tasks)
+
+    async def kill(self):
+        logger.info("Killing")
+        await self.backup_bot.backup()
+        for task in self.tasks:
+            task.cancel()
+        await asyncio.gather(*self.tasks)
+
+    async def q_episodes(self):
+        while True:
+            dupes = 0
+            max_dupes = 3
+            async for ep in self.podcast_soup.episode_stream():
+                if dupes > max_dupes:
+                    logger.debug(f"Found {dupes} duplicates, stopping")
+                    break
+                ep = Episode.model_validate(ep)
+                if exists(self.session, ep, Episode):
+                    dupes += 1
+                else:
+                    await self.process_q.put(ep)
+            await asyncio.sleep(SCRAPER_SLEEP)
+
+    async def q_threads(self):
+        sub_stream = self.subreddit.stream.submissions(skip_existing=False)
+        async for sub in sub_stream:
+            thread = RedditThread.from_submission(sub)
+
+            if exists(self.session, thread, RedditThread):
+                continue
+
+            await self.process_q.put(thread)
 
 
 async def restore_with_gurus(backup_bot, session):
@@ -23,36 +96,24 @@ async def restore_with_gurus(backup_bot, session):
     backup_bot.restore()
 
 
-async def q_eps(aio_session, process_q):
-    while True:
-        main_soup = await MainSoup.from_url(PODCAST_URL, aio_session)
-        async for episode in main_soup.episode_stream(aio_session):
-            logger.info(f"Episode: {episode.title}")
-            episode = Episode.model_validate(episode)
-            await process_q.put(episode)
-        await asyncio.sleep(SCRAPER_SLEEP)
-
-
 async def q_threads(session, subreddit: Subreddit, process_q):
     sub_stream = subreddit.stream.submissions(skip_existing=False)
     async for sub in sub_stream:
-        if submission_exists(session, sub):
-            continue
         thread = RedditThread.from_submission(sub)
 
-        logger.info(f"Thread: {thread.title}")
+        if exists(session, thread, RedditThread):
+            continue
+
         await process_q.put(thread)
 
 
 async def process_queue(queue: asyncio.Queue, session: Session):
     while True:
         instance = await queue.get()
-        guru_matches = name_or_title_matches_(session, instance, Guru)
-        episode_matches = name_or_title_matches_(session, instance, Episode)
-        thread_matches = name_or_title_matches_(session, instance, RedditThread)
+        guru_matches = get_matches(session, instance, Guru)
+        episode_matches = get_matches(session, instance, Episode)
+        thread_matches = get_matches(session, instance, RedditThread)
 
-        if not any([guru_matches, episode_matches, thread_matches]):
-            continue
         if guru_matches and not isinstance(instance, Guru):
             instance.gurus.extend(guru_matches)
 
@@ -67,45 +128,28 @@ async def process_queue(queue: asyncio.Queue, session: Session):
         queue.task_done()
 
 
-async def backup_and_prune(backupbot: SQLModelBot, pruner: Pruner, backup_sleep):
-    while True:
-        await asyncio.sleep(backup_sleep)
-        await backupbot.backup()
-        pruner.copy_and_prune()
-
-
-# async def name_or_title_matches_old(session: Session, obj_with_title_or_name, match_model) -> list[
-#     SQLModel]:
-#     db_objs = session.exec(select(match_model)).all()
-#     identifier = title_or_name(obj_with_title_or_name)
-#     if hasattr(match_model, 'title'):
-#         matched_tag_models = [_ for _ in db_objs if _.title.lower() in identifier.lower()]
-#     elif hasattr(match_model, 'name'):
-#         matched_tag_models = [_ for _ in db_objs if _.name.lower() in identifier.lower()]
-#     else:
-#         matched_tag_models = []
-#     if matched_tag_models:
-#         logger.info(
-#             f"Found {len(matched_tag_models)} {match_model.__class__._name__} matches for {obj_with_title_or_name.__class__.__name__} - {identifier}")
-#     return matched_tag_models
-
-
-def name_or_title_matches_(
-    session: Session, obj_with_title_or_name: DB_MODEL_TYPE, match_model: type(DB_MODEL_TYPE)
-) -> list[DB_MODEL_TYPE]:
+def get_matches(
+    session: Session, obj_with_title_or_name: DB_MODEL, match_model: type(DB_MODEL)
+) -> list[DB_MODEL]:
     db_objs = session.exec(select(match_model)).all()
     identifier = title_or_name(obj_with_title_or_name)
     if hasattr(match_model, "title"):
-        matched_tag_models = [_ for _ in db_objs if _.title.lower() in identifier.lower()]
+        obj_var = "title"
     elif hasattr(match_model, "name"):
-        matched_tag_models = [_ for _ in db_objs if _.name.lower() in identifier.lower()]
+        obj_var = "name"
     else:
-        matched_tag_models = []
-    if matched_tag_models:
+        raise ValueError(f"Can't find title or name attribute on {match_model.__name__}")
+
+    if matched_tag_models := [_ for _ in db_objs if one_in_other(_, obj_var, identifier)]:
         logger.debug(
-            f"Found {len(matched_tag_models)} {match_model.__name__} matches for {obj_with_title_or_name.__class__.__name__} - {identifier}"
+            f"Found {len(matched_tag_models)} '{match_model.__name__}' {'match' if len(matched_tag_models) == 1 else 'matches'} for {obj_with_title_or_name.__class__.__name__} - {identifier}"
         )
     return matched_tag_models
+
+
+def one_in_other(obj: DB_MODEL, obj_var: str, compare_val: str):
+    ob_val = getattr(obj, obj_var).lower()
+    return ob_val in compare_val.lower() or compare_val.lower() in ob_val
 
 
 def gurus_from_file(session, infile):
@@ -119,9 +163,19 @@ def gurus_from_file(session, infile):
         session.commit()
 
 
-def submission_exists(session, submission: Submission) -> bool:
-    """Checks if a Submission ID is already in the database of RedditThreads"""
-    existing_thread = session.exec(
-        select(RedditThread).where((RedditThread.reddit_id == submission.id))
-    ).first()
-    return existing_thread is not None
+def exists(session: Session, obj: DB_MODEL, model: type(DB_MODEL)) -> bool:
+    # todo hash in db
+    return get_hash(obj) in [get_hash(_) for _ in session.exec(select(model)).all()]
+
+
+def exists_dc(session: Session, obj: dataclass, model: type(DB_MODEL)) -> bool:
+    obj = model.model_validate(obj)
+    # todo hash in db
+    return get_hash(obj) in [get_hash(_) for _ in session.exec(select(model)).all()]
+
+
+@lru_cache()
+def json_map_():
+    from .core.json_map import JSON_NAMES_TO_MODEL_MAP
+
+    return JSON_NAMES_TO_MODEL_MAP

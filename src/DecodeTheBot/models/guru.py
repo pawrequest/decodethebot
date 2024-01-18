@@ -6,6 +6,7 @@ E           sqlalchemy.exc.InvalidRequestError: When initializing mapper Mapper[
 """
 from typing import List, Optional, TYPE_CHECKING
 
+from pawsupport import hash_simple_md5
 from sqlmodel import Field, Relationship, SQLModel, select
 
 from .links import GuruEpisodeLink, RedditThreadGuruLink
@@ -38,6 +39,11 @@ class Guru(GuruBase, table=True):
 
     def ui_detail(self) -> Flex:
         return objects_ui_with([self])
+
+    # @property
+    # def get_hash(self):
+    #     return hash_simple_md5([self.name])
+    #
 
 
 def guru_filter_init(guru_name, session, clazz):

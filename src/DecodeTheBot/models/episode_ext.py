@@ -17,13 +17,15 @@ if TYPE_CHECKING:
 class Episode(EpisodeBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     gurus: List["Guru"] = Relationship(back_populates="episodes", link_model=GuruEpisodeLink)
-    reddit_threads: List["RedditThread"] = Relationship(
-        back_populates="episodes", link_model=RedditThreadEpisodeLink
-    )
+    reddit_threads: List["RedditThread"] = Relationship(back_populates="episodes", link_model=RedditThreadEpisodeLink)
 
     @property
     def slug(self):
         return f"/eps/{self.id}"
+
+    # @property
+    # def get_hash(self):
+    #     return hash_simple_md5([self.title, str(self.date)])
 
     def ui_detail(self) -> Flex:
         writer = RPostWriter(self)

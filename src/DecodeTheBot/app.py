@@ -1,10 +1,11 @@
 import asyncio
 import sys
 from contextlib import asynccontextmanager
-from functools import lru_cache
 
 from aiohttp import ClientSession
 from dotenv import load_dotenv
+from episode_scraper.episode_bot_dc import EpisodeBotDC
+from episode_scraper.soups_dc import PodcastSoup
 from fastapi import FastAPI
 from fastui import prebuilt_html
 from fastui.dev import dev_fastapi_app
@@ -13,15 +14,14 @@ from redditbot import subreddit_cm
 from sqlmodel import Session
 from fastapi.responses import HTMLResponse, PlainTextResponse
 
-from .core.consts import BACKUP_DIR, BACKUP_JSON, BACKUP_SLEEP, GURU_NAMES_FILE, RESTORE_FROM_JSON, \
-    SUBREDDIT_NAME, logger
+from .core.consts import BACKUP_DIR, BACKUP_JSON, PODCAST_URL, SUBREDDIT_NAME, logger
 from .core.database import create_db, engine_
 from .routers.eps import router as eps_router
 from .routers.guroute import router as guru_router
 from .routers.main import router as main_router
 from .routers.red import router as red_router
 from .routers.forms import router as forms_router
-from .tasks import backup_and_prune, gurus_from_file, process_queue, q_eps, q_threads
+from .tasks import DTGBot, json_map_
 
 load_dotenv()
 
@@ -29,32 +29,35 @@ load_dotenv()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     tasks = []
+    process_qu = asyncio.Queue()
     try:
         create_db()
-        logger.info("tables created", bot_name="BOOT")
+        logger.info("tables created")
+
         with Session(engine_()) as session:
+            async with ClientSession() as http_session:
+                async with subreddit_cm(sub_name=SUBREDDIT_NAME) as subreddit:  # noqa E1120 pycharm bug reported
+                    backup_bot = SQLModelBot(
+                        session, json_map_(), BACKUP_JSON, output_dir=BACKUP_DIR
+                    )
 
-            backup_bot = SQLModelBot(session, json_map_(), BACKUP_JSON, output_dir=BACKUP_DIR)
-            pruner = Pruner(backup_target=BACKUP_JSON, output_dir=BACKUP_DIR)
+                    pruner = Pruner(backup_target=BACKUP_JSON, output_dir=BACKUP_DIR)
+                    # episode_bot = await EpisodeBotDC.from_url(PODCAST_URL, process_qu, http_session)
+                    podcast_soup = await PodcastSoup.from_url(PODCAST_URL, http_session, process_qu)
 
-            if RESTORE_FROM_JSON:
-                gurus_from_file(session, GURU_NAMES_FILE)
-                # backup_bot.restore()
-            tasks.append(asyncio.create_task(backup_and_prune(backup_bot, pruner, BACKUP_SLEEP)))
-
-            async with ClientSession() as aio_session:
-                process_qu = asyncio.Queue()
-                tasks.append(asyncio.create_task(q_eps(aio_session, process_qu)))
-
-                async with subreddit_cm(sub_name=SUBREDDIT_NAME) as subreddit:  # noqa E1120
-                    tasks.append(asyncio.create_task(q_threads(session, subreddit, process_qu)))
-
-                    tasks.append(asyncio.create_task(await process_queue(process_qu, session)))
+                    dtg_bot = DTGBot(
+                        session=session,
+                        pruner=pruner,
+                        backup_bot=backup_bot,
+                        subreddit=subreddit,
+                        queue=process_qu,
+                        http_session=http_session,
+                        podcast_soup=podcast_soup,
+                    )
+                    tasks.append(asyncio.create_task(await dtg_bot.run()))
 
                     yield
-                    logger.info('exit backup')
-
-                    await backup_bot.backup()
+                    await dtg_bot.kill()
 
     finally:
         logger.info("Shutting down")
@@ -91,9 +94,3 @@ async def favicon_ico() -> str:
 @app.get("/{path:path}")
 async def html_landing() -> HTMLResponse:
     return HTMLResponse(prebuilt_html(title="DecodeTheBot"))
-
-
-@lru_cache()
-def json_map_():
-    from .core.json_map import JSON_NAMES_TO_MODEL_MAP
-    return JSON_NAMES_TO_MODEL_MAP
