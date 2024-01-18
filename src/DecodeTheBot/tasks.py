@@ -1,6 +1,5 @@
 import asyncio
 from asyncio import Queue
-from dataclasses import dataclass
 from functools import lru_cache
 from typing import TypeVar, Union
 
@@ -20,6 +19,7 @@ from .ui.mixin import title_or_name
 load_dotenv()
 
 DB_MODEL = TypeVar("DB_MODEL", bound=Union[Guru, Episode, RedditThread])
+MAX_DUPES = 12
 
 
 class DTGBot:
@@ -53,7 +53,7 @@ class DTGBot:
                 asyncio.create_task(backup_copy_prune(self.backup_bot, self.pruner, BACKUP_SLEEP)),
                 asyncio.create_task(self.q_episodes()),
                 asyncio.create_task(self.q_threads()),
-                asyncio.create_task(await process_queue(self.process_q, session)),
+                asyncio.create_task(await self.process_queue()),
             ]
             logger.info("Tasks created")
             # await asyncio.gather(*self.tasks)
@@ -68,9 +68,8 @@ class DTGBot:
     async def q_episodes(self):
         while True:
             dupes = 0
-            max_dupes = 3
             async for ep in self.podcast_soup.episode_stream():
-                if dupes > max_dupes:
+                if dupes > MAX_DUPES:
                     logger.debug(f"Found {dupes} duplicates, stopping")
                     break
                 ep = Episode.model_validate(ep)
@@ -91,42 +90,25 @@ class DTGBot:
 
             await self.process_q.put(thread)
 
+    async def process_queue(self):
+        while True:
+            instance = await self.process_q.get()
+            guru_matches = get_matches(self.session, instance, Guru)
+            episode_matches = get_matches(self.session, instance, Episode)
+            thread_matches = get_matches(self.session, instance, RedditThread)
 
-async def restore_with_gurus(backup_bot, session):
-    gurus_from_file(session, GURU_NAMES_FILE)
-    backup_bot.restore()
+            if guru_matches and not isinstance(instance, Guru):
+                instance.gurus.extend(guru_matches)
 
+            if episode_matches and not isinstance(instance, Episode):
+                instance.episodes.extend(episode_matches)
 
-async def q_threads(session, subreddit: Subreddit, process_q):
-    sub_stream = subreddit.stream.submissions(skip_existing=False)
-    async for sub in sub_stream:
-        thread = RedditThread.from_submission(sub)
+            if thread_matches and not isinstance(instance, RedditThread):
+                instance.reddit_threads.extend(thread_matches)
 
-        if exists(session, thread, RedditThread):
-            continue
-
-        await process_q.put(thread)
-
-
-async def process_queue(queue: asyncio.Queue, session: Session):
-    while True:
-        instance = await queue.get()
-        guru_matches = get_matches(session, instance, Guru)
-        episode_matches = get_matches(session, instance, Episode)
-        thread_matches = get_matches(session, instance, RedditThread)
-
-        if guru_matches and not isinstance(instance, Guru):
-            instance.gurus.extend(guru_matches)
-
-        if episode_matches and not isinstance(instance, Episode):
-            instance.episodes.extend(episode_matches)
-
-        if thread_matches and not isinstance(instance, RedditThread):
-            instance.reddit_threads.extend(thread_matches)
-
-        session.add(instance)
-        session.commit()
-        queue.task_done()
+            self.session.add(instance)
+            self.session.commit()
+            self.process_q.task_done()
 
 
 def get_matches(
@@ -165,12 +147,6 @@ def gurus_from_file(session, infile):
 
 
 def exists(session: Session, obj: DB_MODEL, model: type(DB_MODEL)) -> bool:
-    # todo hash in db
-    return get_hash(obj) in [get_hash(_) for _ in session.exec(select(model)).all()]
-
-
-def exists_dc(session: Session, obj: dataclass, model: type(DB_MODEL)) -> bool:
-    obj = model.model_validate(obj)
     # todo hash in db
     return get_hash(obj) in [get_hash(_) for _ in session.exec(select(model)).all()]
 
