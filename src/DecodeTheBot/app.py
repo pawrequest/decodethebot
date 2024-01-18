@@ -4,7 +4,6 @@ from contextlib import asynccontextmanager
 
 from aiohttp import ClientSession
 from dotenv import load_dotenv
-from episode_scraper.episode_bot_dc import EpisodeBotDC
 from episode_scraper.soups_dc import PodcastSoup
 from fastapi import FastAPI
 from fastui import prebuilt_html
@@ -54,7 +53,7 @@ async def lifespan(app: FastAPI):
                         http_session=http_session,
                         podcast_soup=podcast_soup,
                     )
-                    tasks.append(asyncio.create_task(await dtg_bot.run()))
+                    tasks.append(asyncio.create_task(dtg_bot.run()))
 
                     yield
                     await dtg_bot.kill()

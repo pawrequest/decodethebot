@@ -5,10 +5,10 @@ import pytest_asyncio
 from episode_scraper.episode_bot import EpisodeBot
 from sqlmodel import select
 
-from src.DecodeTheBot.models.episode_ext import Episode
+from src.DecodeTheBot.models.episode_model import Episode
 from src.DecodeTheBot.models.guru import Guru
 from src.DecodeTheBot.models.reddit_ext import RedditThread
-from tests.conftest import test_session, MAIN_URL
+from tests.conftest import MAIN_URL
 
 spurious_import = Guru  # protect from ruff
 another_ = RedditThread  # protect from ruff
@@ -32,6 +32,7 @@ async def test_gets_episodes_and_skip_existing(episode_bot, test_session):
     assert e1 in eps
     e2 = await anext(episode_bot.run())
     assert e2 != e1
+
 
 # def test_ep_ext():
 #     ep1 = EpisodeExt(

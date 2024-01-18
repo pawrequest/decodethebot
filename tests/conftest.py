@@ -13,6 +13,7 @@ from random import randint
 import pytest
 from episode_scraper.episode_model import EpisodeBase
 from loguru import logger as _logger
+
 # from sqlalchemy import create_engine
 # from sqlalchemy.pool import StaticPool
 # from sqlmodel import Session
@@ -33,7 +34,7 @@ from sqlmodel import SQLModel, Session
 
 from src.DecodeTheBot.tasks import gurus_from_file
 from src.DecodeTheBot.core.consts import BACKUP_JSON, GURU_NAMES_FILE
-from src.DecodeTheBot.models.episode_ext import Episode  # noqa F401
+from src.DecodeTheBot.models.episode_model import Episode  # noqa F401
 from src.DecodeTheBot.models.guru import Guru  # noqa F401
 from src.DecodeTheBot.models.reddit_ext import RedditThread  # noqa F401
 
@@ -95,10 +96,11 @@ def override_logger():
 # app.dependency_overrides[get_session] = override_session
 # app.dependency_overrides[reddit_cm()] = override_subreddit
 
+
 #
 # @pytest.fixture(scope="function")
 def test_logger(tmp_path):
-    logger = get_logger('local')
+    logger = get_logger("local")
     logger.remove()
     test_loc = tmp_path / "test.log"
     logger.add(test_loc)
@@ -106,7 +108,9 @@ def test_logger(tmp_path):
     logged_line = inspect.getframeinfo(inspect.currentframe()).lineno - 1
     with open(test_loc, "r") as f:
         LOG1 = f.readline()
-    pat_xml = r"^(\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}\.\d{3}\s)\|(\s[A-Z]*\s*)\|(\s.+:.+:\d+\s-\s.*)$"
+    pat_xml = (
+        r"^(\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}\.\d{3}\s)\|(\s[A-Z]*\s*)\|(\s.+:.+:\d+\s-\s.*)$"
+    )
     match = re.match(pat_xml, LOG1)
 
     assert match
@@ -131,7 +135,7 @@ def test_logger(tmp_path):
 @pytest.fixture(scope="session")
 def all_episodes_json():
     with open(BACKUP_JSON, "r") as f:
-        res = json.load(f)['episode']
+        res = json.load(f)["episode"]
         return [json.loads(_) for _ in res]
 
 

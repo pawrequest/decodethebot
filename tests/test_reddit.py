@@ -7,9 +7,9 @@ from asyncpraw.reddit import Subreddit
 from redditbot.monitor import SubredditMonitor
 from redditbot.managers import subreddit_cm
 
-from src.DecodeTheBot.models.reddit_ext import RedditThread # noqa F401
-from src.DecodeTheBot.models.guru import Guru # noqa F401
-from src.DecodeTheBot.models.episode_ext import Episode # noqa F401
+from src.DecodeTheBot.models.reddit_ext import RedditThread  # noqa F401
+from src.DecodeTheBot.models.guru import Guru  # noqa F401
+from src.DecodeTheBot.models.episode_model import Episode  # noqa F401
 
 dotenv.load_dotenv()
 
@@ -35,7 +35,9 @@ async def test_r():
 @pytest_asyncio.fixture
 async def monitor_bot(test_session):
     async with subreddit_cm() as subreddit:
-        mon = SubredditMonitor(session=test_session, match_model=Guru, subreddit=subreddit, thread_db_type=RedditThread)
+        mon = SubredditMonitor(
+            session=test_session, match_model=Guru, subreddit=subreddit, thread_db_type=RedditThread
+        )
         yield mon
 
 
@@ -50,7 +52,9 @@ async def test_monitor(test_session):
     test_session.commit()
 
     async with subreddit_cm("test") as subreddit:
-        mon = SubredditMonitor(session=test_session, match_model=Guru, subreddit=subreddit, thread_db_type=RedditThread)
+        mon = SubredditMonitor(
+            session=test_session, match_model=Guru, subreddit=subreddit, thread_db_type=RedditThread
+        )
         sub_stream = mon.subreddit.stream.submissions(skip_existing=False)
         async for sub in mon.filter_existing_submissions(sub_stream):
             if matches := await mon.get_matches(sub):
@@ -65,5 +69,3 @@ async def test_monitor(test_session):
                 test_session.refresh(thread)
                 assert thread.gurus
                 return
-
-

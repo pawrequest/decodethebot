@@ -12,14 +12,14 @@ from pawsupport import Pruner, SQLModelBot, backup_copy_prune, get_hash
 from sqlmodel import Session, select
 
 from .core.consts import BACKUP_SLEEP, GURU_NAMES_FILE, RESTORE_FROM_JSON, SCRAPER_SLEEP, logger
-from .models.episode_ext import Episode
+from .models.episode_model import Episode
 from .models.guru import Guru
-from .models.reddit_ext import RedditThread
+from .models.reddit_thread_model import RedditThread
 from .ui.mixin import title_or_name
 
 load_dotenv()
 
-DB_MODEL = TypeVar("DB_MODEL_TYPE", bound=Union[Guru, Episode, RedditThread])
+DB_MODEL = TypeVar("DB_MODEL", bound=Union[Guru, Episode, RedditThread])
 
 
 class DTGBot:
@@ -52,7 +52,7 @@ class DTGBot:
             self.tasks = [
                 asyncio.create_task(backup_copy_prune(self.backup_bot, self.pruner, BACKUP_SLEEP)),
                 asyncio.create_task(self.q_episodes()),
-                # asyncio.create_task(self.q_threads()),
+                asyncio.create_task(self.q_threads()),
                 asyncio.create_task(await process_queue(self.process_q, session)),
             ]
             logger.info("Tasks created")
@@ -78,6 +78,7 @@ class DTGBot:
                     dupes += 1
                 else:
                     await self.process_q.put(ep)
+            logger.debug(f"Sleeping for {SCRAPER_SLEEP} seconds")
             await asyncio.sleep(SCRAPER_SLEEP)
 
     async def q_threads(self):

@@ -1,7 +1,7 @@
-from DecodeTheBot.models.episode_ext import Episode
+from DecodeTheBot.models.episode_model import Episode
 from DecodeTheBot.models.guru import Guru
 from DecodeTheBot.models.links import GuruEpisodeLink, RedditThreadEpisodeLink, RedditThreadGuruLink
-from DecodeTheBot.models.reddit_ext import RedditThread
+from DecodeTheBot.models.reddit_thread_model import RedditThread
 
 JSON_NAMES_TO_MODEL_MAP = {
     "episode": Episode,

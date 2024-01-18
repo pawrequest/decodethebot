@@ -6,7 +6,7 @@ from loguru import logger
 
 from DecodeTheBot.core.consts import PAGE_SIZE
 from DecodeTheBot.core.database import get_session
-from DecodeTheBot.models.episode_ext import Episode
+from DecodeTheBot.models.episode_model import Episode
 from DecodeTheBot.models.guru import Guru
 from DecodeTheBot.routers.guroute import guru_filter
 from DecodeTheBot.ui.mixin import objects_ui_with
@@ -30,14 +30,14 @@ async def episode_view(ep_id: int, session: Session = Depends(get_session)) -> l
 
 @router.get("/", response_model=FastUI, response_model_exclude_none=True)
 def episode_list_view(
-        page: int = 1, guru_name: str | None = None, session: Session = Depends(get_session)
+    page: int = 1, guru_name: str | None = None, session: Session = Depends(get_session)
 ) -> list[AnyComponent]:
     logger.info("episode_filter")
     data, filter_form_initial = guru_filter_init(guru_name, session, Episode)
     data.sort(key=lambda x: x.date, reverse=True)
 
     total = len(data)
-    data = data[(page - 1) * PAGE_SIZE: page * PAGE_SIZE]
+    data = data[(page - 1) * PAGE_SIZE : page * PAGE_SIZE]
     components = [
         guru_filter(filter_form_initial, "episodes"),
         objects_ui_with(data),

@@ -3,7 +3,7 @@ from loguru import logger
 from sqlmodel import Session
 
 from src.DecodeTheBot.models.guru import Guru
-from src.DecodeTheBot.models.episode_ext import Episode
+from src.DecodeTheBot.models.episode_model import Episode
 from src.DecodeTheBot.tasks import get_matches
 
 
@@ -28,6 +28,8 @@ async def test_all_matches(test_session_with_gurus: Session, random_episode: Epi
     matches = get_matches(test_session_with_gurus, random_episode, Guru)
     assert len(matches) > 0
     assert all(isinstance(match, Guru) for match in matches)
+
+
 #
 #
 # @pytest.mark.asyncio

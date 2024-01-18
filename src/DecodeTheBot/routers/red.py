@@ -1,11 +1,11 @@
 from fastui import AnyComponent, FastUI, components as c
 from fastapi import APIRouter, Depends
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from DecodeTheBot.core.consts import PAGE_SIZE
 from DecodeTheBot.core.database import get_session
 from DecodeTheBot.models.guru import guru_filter_init
-from DecodeTheBot.models.reddit_ext import RedditThread
+from DecodeTheBot.models.reddit_thread_model import RedditThread
 from DecodeTheBot.routers.guroute import guru_filter
 from DecodeTheBot.ui.mixin import objects_ui_with
 from DecodeTheBot.ui.shared import default_page, back_link
@@ -15,7 +15,9 @@ router = APIRouter()
 
 # FastUI
 @router.get("/{thread_id}", response_model=FastUI, response_model_exclude_none=True)
-async def thread_view(thread_id: int, session: Session = Depends(get_session)) -> list[AnyComponent]:
+async def thread_view(
+    thread_id: int, session: Session = Depends(get_session)
+) -> list[AnyComponent]:
     thread = session.get(RedditThread, thread_id)
     if not thread:
         raise Exception(f"Thread {thread_id} not found")

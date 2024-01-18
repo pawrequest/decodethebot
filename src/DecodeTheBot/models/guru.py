@@ -6,14 +6,13 @@ E           sqlalchemy.exc.InvalidRequestError: When initializing mapper Mapper[
 """
 from typing import List, Optional, TYPE_CHECKING
 
-from pawsupport import hash_simple_md5
 from sqlmodel import Field, Relationship, SQLModel, select
 
 from .links import GuruEpisodeLink, RedditThreadGuruLink
 from ..ui.mixin import Flex, objects_ui_with
 
 if TYPE_CHECKING:
-    from .episode_ext import Episode
+    from .episode_model import Episode
     from .reddit_ext import RedditThread
 
     ...
@@ -32,7 +31,10 @@ class Guru(GuruBase, table=True):
 
     episodes: List["Episode"] = Relationship(back_populates="gurus", link_model=GuruEpisodeLink)
 
-    reddit_threads: List["RedditThread"] = Relationship(back_populates="gurus", link_model=RedditThreadGuruLink)
+    reddit_threads: List["RedditThread"] = Relationship(
+        back_populates="gurus", link_model=RedditThreadGuruLink
+    )
+
     @property
     def interest(self):
         return len(self.episodes) + len(self.reddit_threads)
