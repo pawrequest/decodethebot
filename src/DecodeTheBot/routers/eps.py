@@ -3,14 +3,14 @@ from fastui import AnyComponent, FastUI, components as c
 from fastapi import APIRouter, Depends
 from sqlmodel import Session, select
 from loguru import logger
+from pawsupport import fuis
 
 from DecodeTheBot.core.consts import PAGE_SIZE
 from DecodeTheBot.core.database import get_session
 from DecodeTheBot.models.episode import Episode
 from DecodeTheBot.models.guru import Guru
 from DecodeTheBot.routers.guroute import guru_filter
-from DecodeTheBot.ui.dtg_ui import objects_ui_with
-from DecodeTheBot.ui.shared import back_link, default_page
+from DecodeTheBot.ui.dtg_ui import objects_ui_with, dtg_default_page
 
 router = APIRouter()
 
@@ -20,12 +20,7 @@ router = APIRouter()
 async def episode_view(ep_id: int, session: Session = Depends(get_session)) -> list[AnyComponent]:
     episode = session.get(Episode, ep_id)
 
-    return default_page(
-        components=[
-            back_link(),
-            episode.ui_detail(),
-        ],
-    )
+    return dtg_default_page([fuis.back_link(), episode.ui_detail()], episode.title)
 
 
 @router.get("/", response_model=FastUI, response_model_exclude_none=True)
@@ -38,14 +33,14 @@ def episode_list_view(
 
     total = len(data)
     data = data[(page - 1) * PAGE_SIZE : page * PAGE_SIZE]
-    components = [
-        guru_filter(filter_form_initial, "episodes"),
-        objects_ui_with(data),
-        c.Pagination(page=page, page_size=PAGE_SIZE, total=total),
-    ]
-    return default_page(
+
+    return dtg_default_page(
         title="Episodes",
-        components=components,
+        components=[
+            guru_filter(filter_form_initial, "episodes"),
+            objects_ui_with(data),
+            c.Pagination(page=page, page_size=PAGE_SIZE, total=total),
+        ],
     )
 
 

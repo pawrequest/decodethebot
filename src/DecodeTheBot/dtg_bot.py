@@ -1,33 +1,46 @@
 import asyncio
 from asyncio import Queue
+from contextlib import asynccontextmanager
 from functools import lru_cache
-from typing import TypeVar, Union
+from typing import AsyncGenerator, TypeVar, Union
 
 from aiohttp import ClientSession
 from asyncpraw.models import Subreddit
 from dotenv import load_dotenv
+from episode_scraper import EpisodeDC
 from episode_scraper.soups_dc import PodcastSoup
 import pawsupport as ps
-from pawsupport.misc import to_snake
-from sqlmodel import Session, select, text
+from pawsupport import Pruner, SQLModelBot
+from pawsupport.misc import snake_name, snake_name_s
+from redditbot import subreddit_cm
+from sqlmodel import Session, select
 
 from .core.consts import (
+    BACKUP_DIR,
+    BACKUP_JSON,
     BACKUP_SLEEP,
     GURU_NAMES_FILE,
     INIT_EPS,
     MAX_DUPES,
+    PODCAST_URL,
     RESTORE_FROM_JSON,
     SCRAPER_SLEEP,
+    SUBREDDIT_NAME,
     TRIM_DB,
     logger,
 )
+from .core.database import engine_, trim_db
 from .models.episode import Episode
 from .models.guru import Guru
 from .models.reddit_thread import RedditThread
+from .models.links import GuruEpisodeLink, RedditThreadEpisodeLink, RedditThreadGuruLink
 
 load_dotenv()
 
 DB_MODELS = (Guru, Episode, RedditThread)
+LINK_MODELS = (GuruEpisodeLink, RedditThreadEpisodeLink, RedditThreadGuruLink)
+ALL_MODELS = (*DB_MODELS, *LINK_MODELS)
+ALL_MODELS_TYPE = Union[ALL_MODELS]
 DB_MODEL_TYPE = Union[DB_MODELS]
 DB_MODEL_VAR = TypeVar("DB_MODEL_VAR", bound=DB_MODEL_TYPE)
 
@@ -52,8 +65,35 @@ class DTG:
         self.tasks = list()
         self.podcast_soup = podcast_soup
 
-    @ps.quiet_cancel_as
-    @ps.try_except_log_as
+    @classmethod
+    @asynccontextmanager
+    async def minimum_context(
+        cls, sub_name: str = SUBREDDIT_NAME, podcast_url: str = PODCAST_URL
+    ) -> "DTG":
+        process_qu = asyncio.Queue()
+        with Session(engine_()) as session:
+            backup_bot = SQLModelBot(session, model_map_(), BACKUP_JSON, output_dir=BACKUP_DIR)
+            pruner = Pruner(backup_target=BACKUP_JSON, output_dir=BACKUP_DIR)
+
+            async with ClientSession() as http_session:
+                podcast_soup = await PodcastSoup.from_url(podcast_url, http_session, process_qu)
+
+                async with subreddit_cm(sub_name=sub_name) as subreddit:  # noqa E1120 pycharm bug reported
+                    try:
+                        yield cls(
+                            session=session,
+                            pruner=pruner,
+                            backup_bot=backup_bot,
+                            subreddit=subreddit,
+                            queue=process_qu,
+                            http_session=http_session,
+                            podcast_soup=podcast_soup,
+                        )
+                    finally:
+                        # await http_session.close()
+                        ...
+
+    @ps.quiet_cancel_try_log_as
     async def run(self):
         logger.info("Initialised")
         with self.session as session:
@@ -61,10 +101,10 @@ class DTG:
 
             if RESTORE_FROM_JSON:
                 self.backup_bot.restore()
-            if INIT_EPS:
-                await self.init_eps()
             if TRIM_DB:
-                self.trim_db()
+                trim_db(self.session)
+            if INIT_EPS:
+                await init_eps(self.session, self.podcast_soup.episode_stream())
 
             self.tasks = [
                 asyncio.create_task(
@@ -75,7 +115,6 @@ class DTG:
                 asyncio.create_task(self.process_queue()),
             ]
             logger.info("Tasks created")
-            # await asyncio.gather(*self.tasks)
 
     async def kill(self):
         logger.info("Killing")
@@ -84,31 +123,13 @@ class DTG:
             task.cancel()
         await asyncio.gather(*self.tasks)
 
-    @ps.quiet_cancel_as
-    @ps.try_except_log_as
-    async def init_eps(self):
-        logger.info("Initialising episodes")
-        eps = [Episode.model_validate(_) async for _ in self.podcast_soup.episode_stream()]
-        eps = sorted(eps, key=lambda _: _.date)
-        for ep in eps:
-            if ps.exists(self.session, ep, Episode):
-                continue
-            logger.info(f"Adding {ep.title}")
-            self.session.add(ep)
-            thread_matches = get_matches(self.session, ep, RedditThread)
-            guru_matches = get_matches(self.session, ep, Guru)
-            ps.assign_rel(ep, RedditThread, thread_matches)
-            ps.assign_rel(ep, Guru, guru_matches)
-        self.session.commit()
-
-    @ps.quiet_cancel_as
-    @ps.try_except_log_as
+    @ps.quiet_cancel_try_log_as
     async def q_episodes(self):
         while True:
             dupes = 0
             async for ep in self.podcast_soup.episode_stream():
                 ep = Episode.model_validate(ep)
-                if ps.exists(self.session, ep, Episode):
+                if ps.obj_in_session(self.session, ep, Episode):
                     if dupes > MAX_DUPES:
                         logger.debug(f"Found {dupes} duplicates, stopping")
                         break
@@ -119,20 +140,21 @@ class DTG:
             logger.debug(f"Sleeping for {SCRAPER_SLEEP} seconds")
             await asyncio.sleep(SCRAPER_SLEEP)
 
-    @ps.quiet_cancel_as
-    @ps.try_except_log_as
+    @ps.quiet_cancel_try_log_as
     async def q_threads(self):
         sub_stream = self.subreddit.stream.submissions(skip_existing=False)
         async for sub in sub_stream:
-            thread = RedditThread.from_submission(sub)
+            try:
+                thread = RedditThread.from_submission(sub)
 
-            if ps.exists(self.session, thread, RedditThread):
-                continue
+                if ps.obj_in_session(self.session, thread, RedditThread):
+                    continue
 
-            await self.queue.put(thread)
+                await self.queue.put(thread)
+            except Exception as e:
+                logger.error(f"Error getting thread from submission: {e}")
 
-    @ps.quiet_cancel_as
-    @ps.try_except_log_as
+    @ps.quiet_cancel_try_log_as
     async def process_queue(self):
         while True:
             instance = await self.queue.get()
@@ -149,56 +171,32 @@ class DTG:
             self.queue.task_done()
 
     async def all_matches(self, instance: DB_MODEL_TYPE) -> dict[str, list[DB_MODEL_TYPE]]:
-        return {
-            to_snake(match_type.__name__): get_matches(self.session, instance, match_type)
+        res = {
+            snake_name_s(match_type): db_obj_matches(self.session, instance, match_type)
             for match_type in DB_MODELS
         }
-
-    def trim_db(self):
-        ep_trim = 108
-        red_trim = 20
-        stmts = [
-            text(_)
-            for _ in [
-                f"delete from episode where id >={ep_trim}",
-                f"delete from guruepisodelink where episode_id >={ep_trim}",
-                f"delete from redditthreadepisodelink where episode_id >={ep_trim}",
-                f"delete from redditthread where id >={red_trim}",
-                f"delete from redditthreadepisodelink where reddit_thread_id >={red_trim}",
-                f"delete from redditthreadgurulink where reddit_thread_id >={red_trim}",
-            ]
-        ]
-        try:
-            [self.session.execute(_) for _ in stmts]
-            self.session.commit()
-        except Exception as e:
-            logger.error(e)
+        return res
 
 
-def get_matches(
-    session: Session, obj_with_title_or_name: DB_MODEL_VAR, match_model: type(DB_MODEL_VAR)
+def db_obj_matches(
+    session: Session, obj: DB_MODEL_TYPE, model: type(DB_MODEL_VAR)
 ) -> list[DB_MODEL_VAR]:
-    if isinstance(obj_with_title_or_name, match_model):
+    if isinstance(obj, model):
         return []
-    db_objs = session.exec(select(match_model)).all()
-    identifier = ps.title_or_name_val(obj_with_title_or_name)
-    if hasattr(match_model, "title"):
-        obj_var = "title"
-    elif hasattr(match_model, "name"):
-        obj_var = "name"
-    else:
-        raise ValueError(f"Can't find title or name attribute on {match_model.__name__}")
+    db_objs = session.exec(select(model)).all()
+    identifier = ps.title_or_name_val(obj)
+    obj_var = ps.title_or_name_var(model)
 
     if matched_tag_models := [_ for _ in db_objs if one_in_other(_, obj_var, identifier)]:
         logger.debug(
-            f"Found {len(matched_tag_models)} '{match_model.__name__}' {'match' if len(matched_tag_models) == 1 else 'matches'} for {obj_with_title_or_name.__class__.__name__} - {identifier}"
+            f"Found {len(matched_tag_models)} '{model.__name__}' {'match' if len(matched_tag_models) == 1 else 'matches'} for {obj.__class__.__name__} - {identifier}"
         )
     return matched_tag_models
 
 
 def one_in_other(obj: DB_MODEL_VAR, obj_var: str, compare_val: str):
-    ob_val = getattr(obj, obj_var).lower()
-    return ob_val in compare_val.lower() or compare_val.lower() in ob_val
+    ob_low = getattr(obj, obj_var).lower()
+    return ob_low in compare_val.lower() or compare_val.lower() in ob_low
 
 
 def gurus_from_file(session, infile):
@@ -213,7 +211,33 @@ def gurus_from_file(session, infile):
 
 
 @lru_cache()
-def json_map_():
-    from .core.json_map import JSON_NAMES_TO_MODEL_MAP
+def model_map_():
+    return {snake_name(_): _ for _ in ALL_MODELS}
 
-    return JSON_NAMES_TO_MODEL_MAP
+
+@ps.quiet_cancel_try_log_as
+async def init_eps(session, episode_stream: AsyncGenerator[EpisodeDC, None]):
+    init_n = 1
+    init_i = 0
+    logger.info("Initialising episodes")
+    eps = []
+    async for ep in episode_stream:
+        ep = Episode.model_validate(ep)
+        eps.append(ep)
+        init_i += 1
+        if init_i >= init_n:
+            break
+
+    # eps = [Episode.model_validate(_) async for _ in episode_stream]
+    eps = sorted(eps, key=lambda _: _.date)
+    for ep in eps:
+        if ps.obj_in_session(session, ep, Episode):
+            continue
+        logger.info(f"Adding {ep.title}")
+        session.add(ep)
+        thread_matches = db_obj_matches(session, ep, RedditThread)
+        guru_matches = db_obj_matches(session, ep, Guru)
+        ps.assign_rel(ep, RedditThread, thread_matches)
+        ps.assign_rel(ep, Guru, guru_matches)
+    if session.new:
+        session.commit()

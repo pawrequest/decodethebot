@@ -1,6 +1,6 @@
 # no dont do this!! from __future__ import annotations
 from datetime import datetime
-from typing import Dict, TYPE_CHECKING, Optional, List
+from typing import Dict, List, Optional, TYPE_CHECKING
 
 from asyncpraw.models import Submission
 from fastui.components import Details
@@ -8,9 +8,9 @@ from pawsupport import hash_simple_md5
 from pawsupport.fastui_suport.fuis import Flex
 from pydantic import field_validator
 from sqlalchemy import Column
-from sqlmodel import Field, JSON, SQLModel, Relationship
+from sqlmodel import Field, JSON, Relationship, SQLModel
 
-from DecodeTheBot.models.links import RedditThreadGuruLink, RedditThreadEpisodeLink
+from DecodeTheBot.models.links import RedditThreadEpisodeLink, RedditThreadGuruLink
 
 if TYPE_CHECKING:
     from DecodeTheBot.models.episode import Episode
@@ -67,3 +67,7 @@ class RedditThread(RedditThreadBase, table=True, extend_existing=True):
 
     def ui_detail(self) -> Flex:
         return Details(data=self)
+
+    @classmethod
+    def rout_prefix(cls):
+        return "/red/"

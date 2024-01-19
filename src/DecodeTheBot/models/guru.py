@@ -34,6 +34,10 @@ class Guru(GuruBase, table=True):
         back_populates="gurus", link_model=RedditThreadGuruLink
     )
 
+    @classmethod
+    def rout_prefix(cls):
+        return "/guru/"
+
     @property
     def interest(self):
         return len(self.episodes) + len(self.reddit_threads)
@@ -52,7 +56,7 @@ def guru_filter_init(guru_name, session, clazz):
     if guru_name:
         guru = session.exec(select(Guru).where(Guru.name == guru_name)).one()
         statement = select(clazz).where(clazz.gurus.any(Guru.id == guru.id))
-        data = session.exec(select(clazz).where(clazz.gurus.any(Guru.id == guru.id))).all()
+        data = session.exec(statement).all()
         filter_form_initial["guru"] = {"value": guru_name, "label": guru.name}
     else:
         data = session.query(clazz).all()

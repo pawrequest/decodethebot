@@ -5,12 +5,12 @@ from fastapi import APIRouter, Depends
 from sqlmodel import Session
 from loguru import logger
 from pydantic import BaseModel, Field
+from pawsupport import fuis
 
 from DecodeTheBot.core.consts import PAGE_SIZE
 from DecodeTheBot.core.database import get_session
 from DecodeTheBot.models.guru import Guru
-from DecodeTheBot.ui.dtg_ui import objects_ui_with
-from DecodeTheBot.ui.shared import back_link, default_page, empty_page
+from DecodeTheBot.ui.dtg_ui import objects_ui_with, dtg_navbar, dtg_default_page
 
 router = APIRouter()
 
@@ -21,12 +21,12 @@ async def guru_view(guru_id: int, session: Session = Depends(get_session)) -> li
     # guru = Guru.model_validate(guru)
     # guru = Guru.model_validate(guru)
     if not isinstance(guru, Guru):
-        return empty_page()
+        return fuis.empty_page()
 
-    return default_page(
+    return dtg_default_page(
         title=guru.name,
         components=[
-            back_link(),
+            fuis.back_link(),
             guru.ui_detail(),
         ],
     )
@@ -35,6 +35,7 @@ async def guru_view(guru_id: int, session: Session = Depends(get_session)) -> li
 @router.get("/", response_model=FastUI, response_model_exclude_none=True)
 def guru_list_view(page: int = 1, session: Session = Depends(get_session)) -> list[AnyComponent]:
     logger.info("guru list view")
+
     data = session.query(Guru).all()
     data = [_ for _ in data if _.episodes or _.reddit_threads]
     data.sort(key=lambda x: len(x.episodes) + len(x.reddit_threads), reverse=True)
@@ -45,29 +46,17 @@ def guru_list_view(page: int = 1, session: Session = Depends(get_session)) -> li
     data = data[(page - 1) * PAGE_SIZE : page * PAGE_SIZE]
 
     try:
-        return default_page(
+        return dtg_default_page(
             title="Gurus",
             components=[
                 objects_ui_with(data),
                 c.Pagination(page=page, page_size=PAGE_SIZE, total=total),
             ],
         )
-        # return default_page(
-        #     title="Gurus",
-        #     components=[
-        #         object_ui_with_related(gurus),
-        #         c.Pagination(page=page, page_size=PAGE_SIZE, total=len(gurus)),
-        #     ],
-        # )
-        # return fast_ui_default_page(
-        #     object_ui_with_related(gurus),
-        #     c.Pagination(page=page, page_size=PAGE_SIZE, total=len(gurus)),
-        #     title="Gurus",
-        # )
 
     except Exception as e:
         logger.error(e)
-        return empty_page()
+        return fuis.empty_page(nav_bar=dtg_navbar())
 
 
 class EpisodeGuruFilter(BaseModel):

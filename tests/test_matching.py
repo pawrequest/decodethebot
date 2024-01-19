@@ -4,7 +4,7 @@ from sqlmodel import Session
 
 from src.DecodeTheBot.models.guru import Guru
 from src.DecodeTheBot.models.episode import Episode
-from src.DecodeTheBot.dtg_bot import get_matches
+from src.DecodeTheBot.dtg_bot import db_obj_matches
 
 
 # @pytest.mark.asyncio
@@ -25,7 +25,7 @@ from src.DecodeTheBot.dtg_bot import get_matches
 @pytest.mark.asyncio
 async def test_all_matches(test_session_with_gurus: Session, random_episode: Episode):
     logger.info(f"\nmay fail if random ep has no matches: {random_episode}")
-    matches = get_matches(test_session_with_gurus, random_episode, Guru)
+    matches = db_obj_matches(test_session_with_gurus, random_episode, Guru)
     assert len(matches) > 0
     assert all(isinstance(match, Guru) for match in matches)
 

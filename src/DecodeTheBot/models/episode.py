@@ -110,6 +110,10 @@ class Episode(EpisodeBase, table=True):
     def get_hash(self):
         return hash_simple_md5([self.title, str(self.date)])
 
+    @classmethod
+    def rout_prefix(cls):
+        return "/eps/"
+
     def ui_detail(self) -> Flex:
         writer = RPostWriter(self)
         markup = writer.write_one()

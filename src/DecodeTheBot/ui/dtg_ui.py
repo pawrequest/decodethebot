@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-from functools import partial
 from typing import Sequence, Union
 
 from fastui import components as c
 from fastui.events import GoToEvent
 from loguru import logger
 import pawsupport as ps
-
-# from pawsupport import slug_or_none, title_or_name_val, title_or_name_var
 from pawsupport.fastui_suport import fuis
+from pawsupport.fastui_suport.fuis import default_page
+from pawsupport.misc import title_from_snake
+from sqlalchemy import inspect
 
-from DecodeTheBot.ui.css import HEAD, PLAY_COL, SUB_LIST, TITLE_COL
+from DecodeTheBot.ui.css import HEAD, PLAY_COL, SUB_LIST, TITLE_COL, TITLE
 
 
 def get_headers(header_names: list) -> c.Div:
@@ -22,8 +22,9 @@ def get_headers(header_names: list) -> c.Div:
 
 def objects_ui_with(objects: Sequence) -> c.Div:
     try:
-        ui_list = [_object_ui_with_related2(_) for _ in objects]
+        ui_list = [_object_ui_with_related(_) for _ in objects]
         head_names = [_[0] for _ in ui_list[0]]
+        head_names = [title_from_snake(_) for _ in head_names]
         headers = get_headers(head_names)
         rows = [fuis.Row([_[1] for _ in row_obj]) for row_obj in ui_list]
 
@@ -53,7 +54,7 @@ def object_col_one(obj, class_name="") -> Union[c.Div, c.Link]:
 
 
 def get_typs() -> list[str]:
-    from DecodeTheBot.dtg_bot import DB_MODELS
+    from ..dtg_bot import DB_MODELS
 
     typs = [ps.misc.to_snake(_.__name__) for _ in DB_MODELS]
     return typs
@@ -66,27 +67,7 @@ def get_related_typs(obj) -> list[str]:
     return typs
 
 
-# def _object_ui_with_related(obj) -> dict[str, c.Div]:
-#     # typs = ["gurus", "episodes", "reddit_threads"]
-#     typs = [ps.misc.to_snake(_.__name__) for _ in DB_MODELS]
-#     out_d = dict()
-#
-#     for typ in typs:
-#         if hasattr(obj, typ):
-#             out = getattr(obj, typ, None)
-#             out_d[typ] = (
-#                 objects_col(out, class_name_int=SUB_LIST, class_name_ext=SUB_LIST)
-#                 if out
-#                 else fuis.empty_div(col=True)
-#             )
-#     last = out_d.popitem()
-#     ident_name = ps.title_or_name_var(obj)
-#     out_d[ident_name] = title_column(obj)
-#     out_d.update({last[0]: last[1]})
-#     return out_d
-
-
-def _object_ui_with_related2(obj) -> list[tuple[str, c.Div]]:
+def _object_ui_with_related(obj) -> list[tuple[str, c.Div]]:
     out_list = [
         (
             typ,
@@ -130,4 +111,28 @@ def ui_link(title, url, on_click=None, class_name="") -> c.Link:
     return link
 
 
-guru_col = partial(fuis.Col, classes=["col-10"])
+def log_object_state(obj):
+    obj_name = obj.__class__.__name__
+    insp = inspect(obj)
+    logger.info(f"State of {obj_name}:")
+    logger.info(f"Transient: {insp.transient}")
+    logger.info(f"Pending: {insp.pending}")
+    logger.info(f"Persistent: {insp.persistent}")
+    logger.info(f"Detached: {insp.detached}")
+    logger.debug("finished")
+
+
+def dtg_navbar():
+    from ..dtg_bot import DB_MODELS
+
+    return fuis.nav_bar_(DB_MODELS)
+
+
+def dtg_default_page(components, title=None):
+    return default_page(
+        title=title or "Decode The Guru",
+        components=components,
+        navbar=dtg_navbar(),
+        header_class=TITLE,
+        # page_classname=PAGE,
+    )
