@@ -7,17 +7,7 @@ from aiohttp import ClientSession
 from asyncpraw.models import Subreddit
 from dotenv import load_dotenv
 from episode_scraper.soups_dc import PodcastSoup
-from pawsupport import (
-    Pruner,
-    SQLModelBot,
-    assign_all,
-    assign_rel,
-    backup_copy_prune,
-    get_hash,
-    quiet_cancel,
-    title_or_name,
-    try_except_log,
-)
+import pawsupport as ps
 from pawsupport.misc import to_snake
 from sqlmodel import Session, select, text
 
@@ -35,10 +25,10 @@ from .models.episode import Episode
 from .models.guru import Guru
 from .models.reddit_thread import RedditThread
 
-MATCH_MODELS = [Guru, Episode, RedditThread]
 load_dotenv()
 
-DB_MODEL_TYPE = Union[Guru, Episode, RedditThread]
+DB_MODELS = (Guru, Episode, RedditThread)
+DB_MODEL_TYPE = Union[DB_MODELS]
 DB_MODEL_VAR = TypeVar("DB_MODEL_VAR", bound=DB_MODEL_TYPE)
 
 
@@ -46,8 +36,8 @@ class DTG:
     def __init__(
         self,
         session: Session,
-        pruner: Pruner,
-        backup_bot: SQLModelBot,
+        pruner: ps.Pruner,
+        backup_bot: ps.SQLModelBot,
         subreddit: Subreddit,
         queue: Queue,
         podcast_soup: PodcastSoup,
@@ -62,7 +52,8 @@ class DTG:
         self.tasks = list()
         self.podcast_soup = podcast_soup
 
-    @quiet_cancel
+    @ps.quiet_cancel
+    @ps.try_except_log
     async def run(self):
         logger.info("Initialised")
         with self.session as session:
@@ -76,7 +67,9 @@ class DTG:
                 self.trim_db()
 
             self.tasks = [
-                asyncio.create_task(backup_copy_prune(self.backup_bot, self.pruner, BACKUP_SLEEP)),
+                asyncio.create_task(
+                    ps.backup_copy_prune(self.backup_bot, self.pruner, BACKUP_SLEEP)
+                ),
                 asyncio.create_task(self.q_episodes()),
                 asyncio.create_task(self.q_threads()),
                 asyncio.create_task(self.process_queue()),
@@ -91,13 +84,14 @@ class DTG:
             task.cancel()
         await asyncio.gather(*self.tasks)
 
-    @quiet_cancel
+    @ps.quiet_cancel
+    @ps.try_except_log
     async def q_episodes(self):
         while True:
             dupes = 0
             async for ep in self.podcast_soup.episode_stream():
                 ep = Episode.model_validate(ep)
-                if self.exists(ep, Episode):
+                if ps.exists(self.session, ep, Episode):
                     if dupes > MAX_DUPES:
                         logger.debug(f"Found {dupes} duplicates, stopping")
                         break
@@ -108,35 +102,37 @@ class DTG:
             logger.debug(f"Sleeping for {SCRAPER_SLEEP} seconds")
             await asyncio.sleep(SCRAPER_SLEEP)
 
-    @quiet_cancel
+    @ps.quiet_cancel
+    @ps.try_except_log
     async def init_eps(self):
         logger.info("Initialising episodes")
         eps = [Episode.model_validate(_) async for _ in self.podcast_soup.episode_stream()]
         eps = sorted(eps, key=lambda _: _.date)
         for ep in eps:
-            if self.exists(ep, Episode):
+            if ps.exists(self.session, ep, Episode):
                 continue
             logger.info(f"Adding {ep.title}")
             self.session.add(ep)
             thread_matches = get_matches(self.session, ep, RedditThread)
             guru_matches = get_matches(self.session, ep, Guru)
-            assign_rel(ep, RedditThread, thread_matches)
-            assign_rel(ep, Guru, guru_matches)
+            ps.assign_rel(ep, RedditThread, thread_matches)
+            ps.assign_rel(ep, Guru, guru_matches)
         self.session.commit()
 
-    @quiet_cancel
+    @ps.quiet_cancel
+    @ps.try_except_log
     async def q_threads(self):
         sub_stream = self.subreddit.stream.submissions(skip_existing=False)
         async for sub in sub_stream:
             thread = RedditThread.from_submission(sub)
 
-            if self.exists(thread, RedditThread):
+            if ps.exists(self.session, thread, RedditThread):
                 continue
 
             await self.queue.put(thread)
 
-    @quiet_cancel
-    @try_except_log
+    @ps.quiet_cancel
+    @ps.try_except_log
     async def process_queue(self):
         while True:
             instance = await self.queue.get()
@@ -145,30 +141,21 @@ class DTG:
             if isinstance(instance, RedditThread) and not matches_n:
                 continue
             self.session.add(instance)
-            await assign_all(instance, matches_d)
-            logger.info(f"Processing {instance.__class__.__name__} - {title_or_name(instance)}")
+            await ps.assign_all(instance, matches_d)
+            logger.info(f"Processing {instance.__class__.__name__} - {ps.title_or_name(instance)}")
             self.session.commit()
             self.queue.task_done()
 
     async def all_matches(self, instance) -> dict[str, list[DB_MODEL_TYPE]]:
-        match_types = MATCH_MODELS
         matches = {
             to_snake(match_type.__name__): get_matches(self.session, instance, match_type)
-            for match_type in match_types
+            for match_type in DB_MODELS
         }
         return matches
 
-    async def all_matches1(self, instance) -> dict[str, list[DB_MODEL_TYPE]]:
-        matches = dict(
-            gurus=get_matches(self.session, instance, Guru),
-            episodes=get_matches(self.session, instance, Episode),
-            reddit_threads=get_matches(self.session, instance, RedditThread),
-        )
-        return matches
-
-    def exists(self, obj: DB_MODEL_VAR, model: type(DB_MODEL_VAR)) -> bool:
-        # todo hash in db
-        return get_hash(obj) in [get_hash(_) for _ in self.session.exec(select(model)).all()]
+    # def exists(self, obj: DB_MODEL_VAR, model: type(DB_MODEL_VAR)) -> bool:
+    #     # todo hash in db
+    #     return get_hash(obj) in [get_hash(_) for _ in self.session.exec(select(model)).all()]
 
     def trim_db(self):
         ep_trim = 107
@@ -197,7 +184,7 @@ def get_matches(
     if isinstance(obj_with_title_or_name, match_model):
         return []
     db_objs = session.exec(select(match_model)).all()
-    identifier = title_or_name(obj_with_title_or_name)
+    identifier = ps.title_or_name(obj_with_title_or_name)
     if hasattr(match_model, "title"):
         obj_var = "title"
     elif hasattr(match_model, "name"):

@@ -5,8 +5,8 @@ from datetime import datetime
 from typing import Dict, List, Optional, Sequence, TYPE_CHECKING
 
 from episode_scraper.writer_dc import RPostWriter
-from pawsupport import hash_simple_md5
 from pawsupport.fastui_suport.fuis import Flex
+from pawsupport.misc import hash_simple_md5
 from sqlmodel import Field, JSON, Relationship, SQLModel
 from dateutil import parser
 from pydantic import BaseModel, field_validator
