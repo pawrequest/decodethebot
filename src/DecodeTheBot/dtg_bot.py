@@ -7,7 +7,17 @@ from aiohttp import ClientSession
 from asyncpraw.models import Subreddit
 from dotenv import load_dotenv
 from episode_scraper.soups_dc import PodcastSoup
-from pawsupport import Pruner, SQLModelBot, backup_copy_prune, get_hash, quiet_cancel, title_or_name
+from pawsupport import (
+    Pruner,
+    SQLModelBot,
+    assign_all,
+    assign_rel,
+    backup_copy_prune,
+    get_hash,
+    quiet_cancel,
+    title_or_name,
+    try_except_log,
+)
 from pawsupport.misc import to_snake
 from sqlmodel import Session, select, text
 
@@ -25,6 +35,7 @@ from .models.episode import Episode
 from .models.guru import Guru
 from .models.reddit_thread import RedditThread
 
+MATCH_MODELS = [Guru, Episode, RedditThread]
 load_dotenv()
 
 DB_MODEL_TYPE = Union[Guru, Episode, RedditThread]
@@ -47,7 +58,7 @@ class DTG:
         self.pruner = pruner
         self.backup_bot = backup_bot
         self.subreddit = subreddit
-        self.process_q = queue
+        self.queue = queue
         self.tasks = list()
         self.podcast_soup = podcast_soup
 
@@ -92,7 +103,7 @@ class DTG:
                         break
                     dupes += 1
                     continue
-                await self.process_q.put(ep)
+                await self.queue.put(ep)
 
             logger.debug(f"Sleeping for {SCRAPER_SLEEP} seconds")
             await asyncio.sleep(SCRAPER_SLEEP)
@@ -109,8 +120,8 @@ class DTG:
             self.session.add(ep)
             thread_matches = get_matches(self.session, ep, RedditThread)
             guru_matches = get_matches(self.session, ep, Guru)
-            self.assign_rel(ep, RedditThread, thread_matches)
-            self.assign_rel(ep, Guru, guru_matches)
+            assign_rel(ep, RedditThread, thread_matches)
+            assign_rel(ep, Guru, guru_matches)
         self.session.commit()
 
     @quiet_cancel
@@ -122,38 +133,38 @@ class DTG:
             if self.exists(thread, RedditThread):
                 continue
 
-            await self.process_q.put(thread)
+            await self.queue.put(thread)
 
     @quiet_cancel
+    @try_except_log
     async def process_queue(self):
         while True:
-            instance = await self.process_q.get()
-            guru_matches = get_matches(self.session, instance, Guru)
-            episode_matches = get_matches(self.session, instance, Episode)
-            thread_matches = get_matches(self.session, instance, RedditThread)
-            if isinstance(instance, RedditThread) and not any([guru_matches, episode_matches]):
+            instance = await self.queue.get()
+            matches_d = await self.all_matches(instance)
+            matches_n = sum([len(_) for _ in matches_d.values()])
+            if isinstance(instance, RedditThread) and not matches_n:
                 continue
-
             self.session.add(instance)
-
-            self.assign_rel(instance, Guru, guru_matches)
-            self.assign_rel(instance, Episode, episode_matches)
-            self.assign_rel(instance, RedditThread, thread_matches)
-
+            await assign_all(instance, matches_d)
             logger.info(f"Processing {instance.__class__.__name__} - {title_or_name(instance)}")
-
             self.session.commit()
-            self.process_q.task_done()
+            self.queue.task_done()
 
-    def assign_rel(self, instance: DB_MODEL_TYPE, model: type[DB_MODEL_TYPE], matches) -> int:
-        if isinstance(instance, model):
-            return 0
-        try:
-            to_extend = getattr(instance, to_snake(model.__name__ + "s"))
-            to_extend.extend(matches)
-            return len(matches)
-        except Exception as e:
-            logger.error(f"Error assigning {model.__name__} to {instance.__class__.__name__} - {e}")
+    async def all_matches(self, instance) -> dict[str, list[DB_MODEL_TYPE]]:
+        match_types = MATCH_MODELS
+        matches = {
+            to_snake(match_type.__name__): get_matches(self.session, instance, match_type)
+            for match_type in match_types
+        }
+        return matches
+
+    async def all_matches1(self, instance) -> dict[str, list[DB_MODEL_TYPE]]:
+        matches = dict(
+            gurus=get_matches(self.session, instance, Guru),
+            episodes=get_matches(self.session, instance, Episode),
+            reddit_threads=get_matches(self.session, instance, RedditThread),
+        )
+        return matches
 
     def exists(self, obj: DB_MODEL_VAR, model: type(DB_MODEL_VAR)) -> bool:
         # todo hash in db
@@ -222,17 +233,3 @@ def json_map_():
     from .core.json_map import JSON_NAMES_TO_MODEL_MAP
 
     return JSON_NAMES_TO_MODEL_MAP
-
-
-async def assign_relations_old(session, instance) -> bool:
-    guru_matches = get_matches(session, instance, Guru)
-    episode_matches = get_matches(session, instance, Episode)
-    thread_matches = get_matches(session, instance, RedditThread)
-
-    if guru_matches and not isinstance(instance, Guru):
-        instance.gurus.extend(guru_matches)
-    if episode_matches and not isinstance(instance, Episode):
-        instance.episodes.extend(episode_matches)
-    if thread_matches and not isinstance(instance, RedditThread):
-        instance.reddit_threads.extend(thread_matches)
-    return any([guru_matches, episode_matches, thread_matches])
