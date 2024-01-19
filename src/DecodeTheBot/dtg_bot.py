@@ -53,7 +53,7 @@ class DTG:
         self.podcast_soup = podcast_soup
 
     @ps.quiet_cancel
-    @ps.try_except_log
+    @ps.try_except_log_as
     async def run(self):
         logger.info("Initialised")
         with self.session as session:
@@ -85,7 +85,24 @@ class DTG:
         await asyncio.gather(*self.tasks)
 
     @ps.quiet_cancel
-    @ps.try_except_log
+    @ps.try_except_log_as
+    async def init_eps(self):
+        logger.info("Initialising episodes")
+        eps = [Episode.model_validate(_) async for _ in self.podcast_soup.episode_stream()]
+        eps = sorted(eps, key=lambda _: _.date)
+        for ep in eps:
+            if ps.exists(self.session, ep, Episode):
+                continue
+            logger.info(f"Adding {ep.title}")
+            self.session.add(ep)
+            thread_matches = get_matches(self.session, ep, RedditThread)
+            guru_matches = get_matches(self.session, ep, Guru)
+            ps.assign_rel(ep, RedditThread, thread_matches)
+            ps.assign_rel(ep, Guru, guru_matches)
+        self.session.commit()
+
+    @ps.quiet_cancel
+    @ps.try_except_log_as
     async def q_episodes(self):
         while True:
             dupes = 0
@@ -103,24 +120,7 @@ class DTG:
             await asyncio.sleep(SCRAPER_SLEEP)
 
     @ps.quiet_cancel
-    @ps.try_except_log
-    async def init_eps(self):
-        logger.info("Initialising episodes")
-        eps = [Episode.model_validate(_) async for _ in self.podcast_soup.episode_stream()]
-        eps = sorted(eps, key=lambda _: _.date)
-        for ep in eps:
-            if ps.exists(self.session, ep, Episode):
-                continue
-            logger.info(f"Adding {ep.title}")
-            self.session.add(ep)
-            thread_matches = get_matches(self.session, ep, RedditThread)
-            guru_matches = get_matches(self.session, ep, Guru)
-            ps.assign_rel(ep, RedditThread, thread_matches)
-            ps.assign_rel(ep, Guru, guru_matches)
-        self.session.commit()
-
-    @ps.quiet_cancel
-    @ps.try_except_log
+    @ps.try_except_log_as
     async def q_threads(self):
         sub_stream = self.subreddit.stream.submissions(skip_existing=False)
         async for sub in sub_stream:
@@ -132,7 +132,7 @@ class DTG:
             await self.queue.put(thread)
 
     @ps.quiet_cancel
-    @ps.try_except_log
+    @ps.try_except_log_as
     async def process_queue(self):
         while True:
             instance = await self.queue.get()
@@ -146,16 +146,11 @@ class DTG:
             self.session.commit()
             self.queue.task_done()
 
-    async def all_matches(self, instance) -> dict[str, list[DB_MODEL_TYPE]]:
-        matches = {
+    async def all_matches(self, instance: DB_MODEL_TYPE) -> dict[str, list[DB_MODEL_TYPE]]:
+        return {
             to_snake(match_type.__name__): get_matches(self.session, instance, match_type)
             for match_type in DB_MODELS
         }
-        return matches
-
-    # def exists(self, obj: DB_MODEL_VAR, model: type(DB_MODEL_VAR)) -> bool:
-    #     # todo hash in db
-    #     return get_hash(obj) in [get_hash(_) for _ in self.session.exec(select(model)).all()]
 
     def trim_db(self):
         ep_trim = 107

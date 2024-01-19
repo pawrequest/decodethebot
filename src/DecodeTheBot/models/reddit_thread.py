@@ -46,10 +46,6 @@ class RedditThreadBase(SQLModel):
         )
         return cls.model_validate(tdict)
 
-    @property
-    def slug(self):
-        return f"/red/{self.id}"
-
 
 class RedditThread(RedditThreadBase, table=True, extend_existing=True):
     id: Optional[int] = Field(default=None, primary_key=True)
