@@ -52,7 +52,7 @@ class DTG:
         self.tasks = list()
         self.podcast_soup = podcast_soup
 
-    @ps.quiet_cancel
+    @ps.quiet_cancel_as
     @ps.try_except_log_as
     async def run(self):
         logger.info("Initialised")
@@ -84,7 +84,7 @@ class DTG:
             task.cancel()
         await asyncio.gather(*self.tasks)
 
-    @ps.quiet_cancel
+    @ps.quiet_cancel_as
     @ps.try_except_log_as
     async def init_eps(self):
         logger.info("Initialising episodes")
@@ -101,7 +101,7 @@ class DTG:
             ps.assign_rel(ep, Guru, guru_matches)
         self.session.commit()
 
-    @ps.quiet_cancel
+    @ps.quiet_cancel_as
     @ps.try_except_log_as
     async def q_episodes(self):
         while True:
@@ -119,7 +119,7 @@ class DTG:
             logger.debug(f"Sleeping for {SCRAPER_SLEEP} seconds")
             await asyncio.sleep(SCRAPER_SLEEP)
 
-    @ps.quiet_cancel
+    @ps.quiet_cancel_as
     @ps.try_except_log_as
     async def q_threads(self):
         sub_stream = self.subreddit.stream.submissions(skip_existing=False)
@@ -131,7 +131,7 @@ class DTG:
 
             await self.queue.put(thread)
 
-    @ps.quiet_cancel
+    @ps.quiet_cancel_as
     @ps.try_except_log_as
     async def process_queue(self):
         while True:
@@ -142,7 +142,9 @@ class DTG:
                 continue
             self.session.add(instance)
             await ps.assign_all(instance, matches_d)
-            logger.info(f"Processing {instance.__class__.__name__} - {ps.title_or_name(instance)}")
+            logger.info(
+                f"Processing {instance.__class__.__name__} - {ps.title_or_name_val(instance)}"
+            )
             self.session.commit()
             self.queue.task_done()
 
@@ -153,8 +155,8 @@ class DTG:
         }
 
     def trim_db(self):
-        ep_trim = 107
-        red_trim = 0
+        ep_trim = 108
+        red_trim = 20
         stmts = [
             text(_)
             for _ in [
@@ -179,7 +181,7 @@ def get_matches(
     if isinstance(obj_with_title_or_name, match_model):
         return []
     db_objs = session.exec(select(match_model)).all()
-    identifier = ps.title_or_name(obj_with_title_or_name)
+    identifier = ps.title_or_name_val(obj_with_title_or_name)
     if hasattr(match_model, "title"):
         obj_var = "title"
     elif hasattr(match_model, "name"):

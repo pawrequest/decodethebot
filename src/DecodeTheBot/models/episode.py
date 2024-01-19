@@ -15,7 +15,7 @@ from loguru import logger
 from fastui import components as c
 
 from .links import GuruEpisodeLink, RedditThreadEpisodeLink
-from ..ui.dtg_ui import object_ui
+from ..ui.dtg_ui import object_col_one
 
 if TYPE_CHECKING:
     from DecodeTheBot.models.guru import Guru
@@ -115,7 +115,7 @@ class Episode(EpisodeBase, table=True):
         markup = writer.write_one()
         return Flex(
             components=[
-                *(object_ui(_) for _ in self.gurus),
+                *(object_col_one(_) for _ in self.gurus),
                 c.Markdown(text=markup),
             ]
         )
