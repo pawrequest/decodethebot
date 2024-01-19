@@ -5,9 +5,9 @@ from sqlmodel import Session
 from DecodeTheBot.core.consts import PAGE_SIZE
 from DecodeTheBot.core.database import get_session
 from DecodeTheBot.models.guru import guru_filter_init
-from DecodeTheBot.models.reddit_thread_model import RedditThread
+from DecodeTheBot.models.reddit_thread import RedditThread
 from DecodeTheBot.routers.guroute import guru_filter
-from DecodeTheBot.ui.mixin import objects_ui_with
+from DecodeTheBot.ui.dtg_ui import objects_ui_with
 from DecodeTheBot.ui.shared import default_page, back_link
 
 router = APIRouter()

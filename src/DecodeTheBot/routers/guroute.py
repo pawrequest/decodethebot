@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from DecodeTheBot.core.consts import PAGE_SIZE
 from DecodeTheBot.core.database import get_session
 from DecodeTheBot.models.guru import Guru
-from DecodeTheBot.ui.mixin import objects_ui_with
+from DecodeTheBot.ui.dtg_ui import objects_ui_with
 from DecodeTheBot.ui.shared import back_link, default_page, empty_page
 
 router = APIRouter()
@@ -42,7 +42,7 @@ def guru_list_view(page: int = 1, session: Session = Depends(get_session)) -> li
     #     return empty_page()
     total = len(data)
 
-    data = data[(page - 1) * PAGE_SIZE: page * PAGE_SIZE]
+    data = data[(page - 1) * PAGE_SIZE : page * PAGE_SIZE]
 
     try:
         return default_page(
@@ -74,7 +74,8 @@ class EpisodeGuruFilter(BaseModel):
     guru_name: str = Field(
         # json_schema_extra={"search_url": "/api/forms/episodes/", "placeholder": "Filter by Guru..."}
         json_schema_extra={
-            "search_url": "/api/forms/search/episodes/", "placeholder": "Filter by Guru..."
+            "search_url": "/api/forms/search/episodes/",
+            "placeholder": "Filter by Guru...",
         }
     )
 
@@ -82,7 +83,8 @@ class EpisodeGuruFilter(BaseModel):
 class ThreadGuruFilter(BaseModel):
     guru_name: str = Field(
         json_schema_extra={
-            "search_url": "/api/forms/search/reddit_threads/", "placeholder": "Filter by Guru..."
+            "search_url": "/api/forms/search/reddit_threads/",
+            "placeholder": "Filter by Guru...",
         }
     )
 

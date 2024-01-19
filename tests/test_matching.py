@@ -3,7 +3,7 @@ from loguru import logger
 from sqlmodel import Session
 
 from src.DecodeTheBot.models.guru import Guru
-from src.DecodeTheBot.models.episode_model import Episode
+from src.DecodeTheBot.models.episode import Episode
 from src.DecodeTheBot.dtg_bot import get_matches
 
 

@@ -6,20 +6,19 @@ E           sqlalchemy.exc.InvalidRequestError: When initializing mapper Mapper[
 """
 from typing import List, Optional, TYPE_CHECKING
 
+from pawsupport.fastui_suport.fuis import Flex
 from sqlmodel import Field, Relationship, SQLModel, select
 
 from .links import GuruEpisodeLink, RedditThreadGuruLink
-from ..ui.mixin import Flex, objects_ui_with
+from ..ui.dtg_ui import objects_ui_with
 
 if TYPE_CHECKING:
-    from .episode_model import Episode
-    from .reddit_ext import RedditThread
-
-    ...
+    from .episode import Episode
+    from .reddit_thread import RedditThread
 
 
 class GuruBase(SQLModel):
-    name: Optional[str] = Field(index=True, default=None, unique=True)
+    name: str = Field(index=True, unique=True)
 
     @property
     def slug(self):

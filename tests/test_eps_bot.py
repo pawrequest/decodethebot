@@ -5,7 +5,7 @@ import pytest_asyncio
 from episode_scraper.episode_bot import EpisodeBot
 from sqlmodel import select
 
-from src.DecodeTheBot.models.episode_model import Episode
+from src.DecodeTheBot.models.episode import Episode
 from src.DecodeTheBot.models.guru import Guru
 from src.DecodeTheBot.models.reddit_ext import RedditThread
 from tests.conftest import MAIN_URL

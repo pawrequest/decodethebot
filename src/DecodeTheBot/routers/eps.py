@@ -6,10 +6,10 @@ from loguru import logger
 
 from DecodeTheBot.core.consts import PAGE_SIZE
 from DecodeTheBot.core.database import get_session
-from DecodeTheBot.models.episode_model import Episode
+from DecodeTheBot.models.episode import Episode
 from DecodeTheBot.models.guru import Guru
 from DecodeTheBot.routers.guroute import guru_filter
-from DecodeTheBot.ui.mixin import objects_ui_with
+from DecodeTheBot.ui.dtg_ui import objects_ui_with
 from DecodeTheBot.ui.shared import back_link, default_page
 
 router = APIRouter()

@@ -6,6 +6,7 @@ from typing import Dict, List, Optional, Sequence, TYPE_CHECKING
 
 from episode_scraper.writer_dc import RPostWriter
 from pawsupport import hash_simple_md5
+from pawsupport.fastui_suport.fuis import Flex
 from sqlmodel import Field, JSON, Relationship, SQLModel
 from dateutil import parser
 from pydantic import BaseModel, field_validator
@@ -14,11 +15,11 @@ from loguru import logger
 from fastui import components as c
 
 from .links import GuruEpisodeLink, RedditThreadEpisodeLink
-from ..ui.mixin import Flex, object_ui
+from ..ui.dtg_ui import object_ui
 
 if TYPE_CHECKING:
     from DecodeTheBot.models.guru import Guru
-    from .reddit_thread_model import RedditThread
+    from .reddit_thread import RedditThread
 
 MAYBE_ATTRS = ["title", "notes", "links", "date"]
 

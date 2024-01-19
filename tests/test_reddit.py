@@ -9,7 +9,7 @@ from redditbot.managers import subreddit_cm
 
 from src.DecodeTheBot.models.reddit_ext import RedditThread  # noqa F401
 from src.DecodeTheBot.models.guru import Guru  # noqa F401
-from src.DecodeTheBot.models.episode_model import Episode  # noqa F401
+from src.DecodeTheBot.models.episode import Episode  # noqa F401
 
 dotenv.load_dotenv()
 
