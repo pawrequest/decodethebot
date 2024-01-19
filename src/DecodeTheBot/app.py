@@ -20,14 +20,13 @@ from .routers.guroute import router as guru_router
 from .routers.main import router as main_router
 from .routers.red import router as red_router
 from .routers.forms import router as forms_router
-from .tasks import DTGBot, json_map_
+from .dtg_bot import DTG, json_map_
 
 load_dotenv()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    tasks = []
     process_qu = asyncio.Queue()
     try:
         create_db()
@@ -44,7 +43,7 @@ async def lifespan(app: FastAPI):
                     # episode_bot = await EpisodeBotDC.from_url(PODCAST_URL, process_qu, http_session)
                     podcast_soup = await PodcastSoup.from_url(PODCAST_URL, http_session, process_qu)
 
-                    dtg_bot = DTGBot(
+                    dtg = DTG(
                         session=session,
                         pruner=pruner,
                         backup_bot=backup_bot,
@@ -53,17 +52,13 @@ async def lifespan(app: FastAPI):
                         http_session=http_session,
                         podcast_soup=podcast_soup,
                     )
-                    tasks.append(asyncio.create_task(dtg_bot.run()))
-
+                    main_task = asyncio.create_task(dtg.run())
                     yield
-                    await dtg_bot.kill()
 
     finally:
-        logger.info("Shutting down")
-        for task in tasks:
-            task.cancel()
-
-        await asyncio.gather(*tasks, return_exceptions=True)
+        await dtg.kill()
+        main_task.cancel()
+        await asyncio.gather(main_task)
 
 
 frontend_reload = "--reload" in sys.argv

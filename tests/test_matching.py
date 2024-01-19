@@ -4,7 +4,7 @@ from sqlmodel import Session
 
 from src.DecodeTheBot.models.guru import Guru
 from src.DecodeTheBot.models.episode_model import Episode
-from src.DecodeTheBot.tasks import get_matches
+from src.DecodeTheBot.dtg_bot import get_matches
 
 
 # @pytest.mark.asyncio

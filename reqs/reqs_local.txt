@@ -1,3 +1,2 @@
--e file:///C:/Users/RYZEN/prdev/redditbot
-file:///C:/Users/RYZEN/prdev/pawsupport
+-e file:///C:/Users/RYZEN/prdev/pawsupport
 -e file:///C:/Users/RYZEN/prdev/episode_scraper

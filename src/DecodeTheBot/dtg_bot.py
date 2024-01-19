@@ -7,7 +7,7 @@ from aiohttp import ClientSession
 from asyncpraw.models import Subreddit
 from dotenv import load_dotenv
 from episode_scraper.soups_dc import PodcastSoup
-from pawsupport import Pruner, SQLModelBot, backup_copy_prune, get_hash
+from pawsupport import Pruner, SQLModelBot, backup_copy_prune, get_hash, quiet_cancel
 from sqlmodel import Session, select
 
 from .core.consts import BACKUP_SLEEP, GURU_NAMES_FILE, RESTORE_FROM_JSON, SCRAPER_SLEEP, logger
@@ -22,7 +22,7 @@ DB_MODEL = TypeVar("DB_MODEL", bound=Union[Guru, Episode, RedditThread])
 MAX_DUPES = 12
 
 
-class DTGBot:
+class DTG:
     def __init__(
         self,
         session: Session,
@@ -42,6 +42,7 @@ class DTGBot:
         self.tasks = list()
         self.podcast_soup = podcast_soup
 
+    @quiet_cancel
     async def run(self):
         logger.info("Initialised")
         with self.session as session:
@@ -53,7 +54,7 @@ class DTGBot:
                 asyncio.create_task(backup_copy_prune(self.backup_bot, self.pruner, BACKUP_SLEEP)),
                 asyncio.create_task(self.q_episodes()),
                 asyncio.create_task(self.q_threads()),
-                asyncio.create_task(await self.process_queue()),
+                asyncio.create_task(self.process_queue()),
             ]
             logger.info("Tasks created")
             # await asyncio.gather(*self.tasks)
@@ -65,6 +66,7 @@ class DTGBot:
             task.cancel()
         await asyncio.gather(*self.tasks)
 
+    @quiet_cancel
     async def q_episodes(self):
         while True:
             dupes = 0
@@ -80,6 +82,7 @@ class DTGBot:
             logger.debug(f"Sleeping for {SCRAPER_SLEEP} seconds")
             await asyncio.sleep(SCRAPER_SLEEP)
 
+    @quiet_cancel
     async def q_threads(self):
         sub_stream = self.subreddit.stream.submissions(skip_existing=False)
         async for sub in sub_stream:
@@ -90,6 +93,7 @@ class DTGBot:
 
             await self.process_q.put(thread)
 
+    @quiet_cancel
     async def process_queue(self):
         while True:
             instance = await self.process_q.get()
