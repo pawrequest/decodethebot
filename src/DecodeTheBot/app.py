@@ -22,7 +22,6 @@ load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # async with DTG.context() as dtg:  # noqa E1120 pycharm bug reported
     async with dtg_context() as dtg:  # noqa E1120 pycharm bug reported
         try:
             create_db()

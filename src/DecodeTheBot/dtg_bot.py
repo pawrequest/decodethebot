@@ -6,18 +6,15 @@ from aiohttp import ClientSession
 from asyncpraw.models import Subreddit
 from dotenv import load_dotenv
 from episode_scraper import PodGetter
-from pawsupport import sqlmodel_support as psql
-from pawsupport import backup_paw as psb
-from pawsupport import async_support as psa
+from pawsupport import async_support as psa, backup_paw as psb, sqlmodel_support as psql
 from redditbot import subreddit_cm
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from .core.consts import (
     BACKUP_DIR,
     BACKUP_JSON,
     BACKUP_SLEEP,
     GURU_NAMES_FILE,
-    INIT_EPS,
     MAX_DUPES,
     PODCAST_URL,
     RESTORE_FROM_JSON,
@@ -26,9 +23,8 @@ from .core.consts import (
     TRIM_DB,
     logger,
 )
-from .core.database import engine_, trim_db
+from .core.database import engine_, gurus_from_file, trim_db
 from .models.episode import Episode
-from .models.guru import Guru
 from .models.reddit_thread import RedditThread
 from DecodeTheBot.core.types import ALL_MODEL, data_models
 
@@ -54,34 +50,6 @@ class DTG(object):
         self.process_q = process_q or Queue()
         self.http_session = http_session or ClientSession()
         self.tasks = list()
-
-    @classmethod
-    @asynccontextmanager
-    async def context(cls, sub_name: str = SUBREDDIT_NAME, podcast_url: str = PODCAST_URL) -> "DTG":
-        try:
-            process_qu = asyncio.Queue()
-            ep_queue = asyncio.Queue()
-
-            with Session(engine_()) as session:
-                async with ClientSession() as http_session:
-                    async with subreddit_cm(sub_name=sub_name) as subreddit:  # noqa E1120 pycharm bug reported
-                        backup_bot = psb.SQLModelBot(
-                            session, psql.model_map_(ALL_MODEL), BACKUP_JSON, output_dir=BACKUP_DIR
-                        )
-                        pruner = psb.Pruner(backup_target=BACKUP_JSON, output_dir=BACKUP_DIR)
-                        pod_getter = PodGetter(podcast_url, http_session, ep_queue)
-
-                        yield cls(
-                            session=session,
-                            pruner=pruner,
-                            backup_bot=backup_bot,
-                            subreddit=subreddit,
-                            process_q=process_qu,
-                            http_session=http_session,
-                            pod_getter=pod_getter,
-                        )
-        finally:
-            ...
 
     async def setup(self):
         logger.info("Initialised")
@@ -182,44 +150,6 @@ class DTG(object):
             except Exception as e:
                 logger.error(f"Error in process_queue: {e}")
                 raise e
-
-
-def gurus_from_file(session, infile):
-    with open(infile, "r") as f:
-        guru_names = f.read().split(",")
-    session_gurus = session.exec(select(Guru.name)).all()
-    if new_gurus := set(guru_names) - set(session_gurus):
-        logger.info(f"Adding {len(new_gurus)} new gurus")
-        gurus = [Guru(name=_) for _ in new_gurus]
-        session.add_all(gurus)
-        session.commit()
-
-
-@psa.quiet_cancel_try_log_as
-async def init_eps(session, queue: Queue):
-    ep_i = 0
-    max_eps = INIT_EPS
-    logger.info("Initialising episodes")
-    eps = []
-    ep = await queue.get()
-    ep = Episode.model_validate(ep)
-    eps.append(ep)
-    ep_i += 1
-    if ep_i >= max_eps:
-        return
-
-    eps = sorted(eps, key=lambda _: _.date)
-    for ep in eps:
-        if psql.obj_in_session(session, ep, Episode):
-            continue
-        logger.info(f"Adding {ep.title}")
-        session.add(ep)
-        thread_matches = psql.db_obj_matches(session, ep, RedditThread)
-        guru_matches = psql.db_obj_matches(session, ep, Guru)
-        psql.assign_rel(ep, RedditThread, thread_matches)
-        psql.assign_rel(ep, Guru, guru_matches)
-    if session.new:
-        session.commit()
 
 
 @asynccontextmanager

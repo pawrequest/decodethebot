@@ -32,7 +32,7 @@ from pawsupport import get_logger
 from sqlalchemy import StaticPool, create_engine
 from sqlmodel import SQLModel, Session
 
-from src.DecodeTheBot.dtg_bot import gurus_from_file
+from DecodeTheBot.core.database import gurus_from_file
 from src.DecodeTheBot.core.consts import BACKUP_JSON, GURU_NAMES_FILE
 from src.DecodeTheBot.models.episode import Episode  # noqa F401
 from src.DecodeTheBot.models.guru import Guru  # noqa F401

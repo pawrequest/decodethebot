@@ -2,9 +2,9 @@ from typing import TypeVar, Union
 
 
 def data_models():
-    from DecodeTheBot.models.episode import Episode
-    from DecodeTheBot.models.guru import Guru
-    from DecodeTheBot.models.reddit_thread import RedditThread
+    from ..models.episode import Episode
+    from ..models.guru import Guru
+    from ..models.reddit_thread import RedditThread
 
     return Guru, Episode, RedditThread
 

@@ -49,21 +49,21 @@ def objects_col(objects: Sequence, class_name_int="", class_name_ext="") -> c.Di
 def object_col_one(obj, class_name="") -> Union[c.Div, c.Link]:
     if not obj:
         return fuis.empty_div(col=True)
-    clink = ui_link(ps.title_or_name_val(obj), ps.slug_or_none(obj))
+    clink = ui_link(ps.title_or_name_val(obj), ps.misc.slug_or_none(obj))
     return fuis.Col(components=[clink], class_name=class_name)
 
 
 def get_typs() -> list[str]:
-    from DecodeTheBot.core.types import DB_MODELS
+    from DecodeTheBot.core.types import data_models
 
-    typs = [ps.misc.to_snake(_.__name__) for _ in DB_MODELS]
+    typs = [ps.misc.to_snake(_.__name__) for _ in data_models()]
     return typs
 
 
 def get_related_typs(obj) -> list[str]:
-    from DecodeTheBot.core.types import DB_MODELS
+    from DecodeTheBot.core.types import data_models
 
-    typs = [f"{ps.misc.to_snake(_.__name__)}s" for _ in DB_MODELS if not isinstance(obj, _)]
+    typs = [f"{ps.misc.to_snake(_.__name__)}s" for _ in data_models() if not isinstance(obj, _)]
     return typs
 
 
@@ -82,7 +82,7 @@ def _object_ui_with_related(obj) -> list[tuple[str, c.Div]]:
 
 
 def title_column(obj) -> fuis.Col:
-    url = ps.slug_or_none(obj)
+    url = ps.misc.slug_or_none(obj)
     title = ps.title_or_name_val(obj)
     return fuis.Col(
         class_name=TITLE_COL,
@@ -123,9 +123,9 @@ def log_object_state(obj):
 
 
 def dtg_navbar():
-    from DecodeTheBot.core.types import DB_MODELS
+    from DecodeTheBot.core.types import data_models
 
-    return fuis.nav_bar_(DB_MODELS)
+    return fuis.nav_bar_(data_models())
 
 
 def dtg_default_page(components, title=None):
