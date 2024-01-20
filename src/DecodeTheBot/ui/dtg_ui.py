@@ -54,14 +54,14 @@ def object_col_one(obj, class_name="") -> Union[c.Div, c.Link]:
 
 
 def get_typs() -> list[str]:
-    from ..dtg_bot import DB_MODELS
+    from DecodeTheBot.core.types import DB_MODELS
 
     typs = [ps.misc.to_snake(_.__name__) for _ in DB_MODELS]
     return typs
 
 
 def get_related_typs(obj) -> list[str]:
-    from DecodeTheBot.dtg_bot import DB_MODELS
+    from DecodeTheBot.core.types import DB_MODELS
 
     typs = [f"{ps.misc.to_snake(_.__name__)}s" for _ in DB_MODELS if not isinstance(obj, _)]
     return typs
@@ -123,7 +123,7 @@ def log_object_state(obj):
 
 
 def dtg_navbar():
-    from ..dtg_bot import DB_MODELS
+    from DecodeTheBot.core.types import DB_MODELS
 
     return fuis.nav_bar_(DB_MODELS)
 

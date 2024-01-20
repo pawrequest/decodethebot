@@ -15,17 +15,19 @@ from .routers.guroute import router as guru_router
 from .routers.main import router as main_router
 from .routers.red import router as red_router
 from .routers.forms import router as forms_router
-from .dtg_bot import DTG
+from .dtg_bot import dtg_context
 
 load_dotenv()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    async with DTG.minimum_context() as dtg:  # noqa E1120 pycharm bug reported
+    # async with DTG.context() as dtg:  # noqa E1120 pycharm bug reported
+    async with dtg_context() as dtg:  # noqa E1120 pycharm bug reported
         try:
             create_db()
             logger.info("tables created")
+            await dtg.setup()
             main_task = asyncio.create_task(dtg.run())
             yield
 
