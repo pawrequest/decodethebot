@@ -11,7 +11,6 @@ import re
 from random import randint
 
 import pytest
-from episode_scraper.episode_model import EpisodeBase
 from loguru import logger as _logger
 
 # from sqlalchemy import create_engine
@@ -28,15 +27,17 @@ from loguru import logger as _logger
 # from main import app
 #
 from asyncpraw import Reddit
-from pawsupport import get_logger
+from pawsupport.logging_ps import get_loguru as get_logger
 from sqlalchemy import StaticPool, create_engine
 from sqlmodel import SQLModel, Session
 
-from DecodeTheBot.core.database import gurus_from_file
+from DecodeTheBot.models.episode import Episode
+
+# import DecodeTheBot as DTGBOT  # noqa F401
+# if "DecodeTheBot.core.database" not in sys.modules:
 from src.DecodeTheBot.core.consts import BACKUP_JSON, GURU_NAMES_FILE
-from src.DecodeTheBot.models.episode import Episode  # noqa F401
-from src.DecodeTheBot.models.guru import Guru  # noqa F401
-from src.DecodeTheBot.models.reddit_ext import RedditThread  # noqa F401
+# from src.DecodeTheBot.models.guru import Guru  # noqa F401
+# from src.DecodeTheBot.models.reddit_thread import RedditThread  # noqa F401
 
 
 @pytest.fixture(scope="session")
@@ -49,6 +50,8 @@ def test_session():
 
 @pytest.fixture(scope="session")
 def test_session_with_gurus(test_session):
+    from DecodeTheBot.dtg import gurus_from_file
+
     gurus_from_file(test_session, GURU_NAMES_FILE)
     yield test_session
 
@@ -142,12 +145,16 @@ def all_episodes_json():
 #
 @pytest.fixture(scope="function")
 def random_episode(all_episodes_json):
+    from src.DecodeTheBot.models.episode import Episode
+
     res = all_episodes_json[randint(0, len(all_episodes_json) - 1)]
     return Episode.model_validate(res)
 
 
 @pytest.mark.asyncio
 async def test_ep_json(random_episode):
+    from src.DecodeTheBot.models.episode import Episode
+
     assert isinstance(random_episode, Episode)
 
 
@@ -181,9 +188,7 @@ def test_db():
 #
 @pytest.fixture(scope="function")
 def blank_test_db(test_db):
-    EpisodeBase.metadata.drop_all(bind=ENGINE)
     Episode.metadata.drop_all(bind=ENGINE)
-    EpisodeBase.metadata.create_all(bind=ENGINE)
     Episode.metadata.create_all(bind=ENGINE)
     yield
 

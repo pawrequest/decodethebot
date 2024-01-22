@@ -1,13 +1,14 @@
 from fastapi import Depends
 from fastui import AnyComponent, FastUI, components as c
-from pawsupport.fastui_suport.fuis import RoutableModel
-from pawsupport.misc import snake_name, snake_name_s
+from pawsupport.fastui_ps.fastui_support import RoutableModel
+from pawsupport.misc_ps import snake_name_s, snake_name
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
 from DecodeTheBot.core.consts import PAGE_SIZE
 from DecodeTheBot.core.database import get_session
 from DecodeTheBot.models.reddit_thread import RedditThread
+from DecodeTheBot.routers.guroute import guru_filter
 from DecodeTheBot.routers.red import router
 from DecodeTheBot.ui.dtg_ui import dtg_default_page, objects_ui_with
 

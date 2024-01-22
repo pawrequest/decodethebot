@@ -3,7 +3,7 @@ from fastui import AnyComponent, FastUI, components as c
 from fastapi import APIRouter, Depends
 from sqlmodel import Session, select
 from loguru import logger
-from pawsupport import fuis
+from pawsupport.fastui_ps import fastui_support as psf
 
 from DecodeTheBot.core.consts import PAGE_SIZE
 from DecodeTheBot.core.database import get_session
@@ -20,7 +20,7 @@ router = APIRouter()
 async def episode_view(ep_id: int, session: Session = Depends(get_session)) -> list[AnyComponent]:
     episode = session.get(Episode, ep_id)
     episode = Episode.model_validate(episode)
-    return dtg_default_page([fuis.back_link(), episode.ui_detail()], episode.title)
+    return dtg_default_page([psf.back_link(), episode.ui_detail()], episode.title)
 
 
 @router.get("/", response_model=FastUI, response_model_exclude_none=True)

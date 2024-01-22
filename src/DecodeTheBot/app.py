@@ -7,15 +7,18 @@ from fastapi import FastAPI
 from fastui import prebuilt_html
 from fastui.dev import dev_fastapi_app
 from fastapi.responses import HTMLResponse, PlainTextResponse
+from pawsupport.logging_ps import get_loguru as get_logger
 
-from .core.consts import logger
+from .core.consts import LOG_FILE
 from .core.database import create_db
 from .routers.eps import router as eps_router
 from .routers.guroute import router as guru_router
 from .routers.main import router as main_router
 from .routers.red import router as red_router
 from .routers.forms import router as forms_router
-from .dtg_bot import dtg_context
+from .dtg import dtg_context
+
+logger = get_logger(LOG_FILE, "local")
 
 load_dotenv()
 
@@ -25,7 +28,7 @@ async def lifespan(app: FastAPI):
     async with dtg_context() as dtg:  # noqa E1120 pycharm bug reported
         try:
             create_db()
-            logger.info("tables created")
+            logger.info("tables created", category="BOOT")
             await dtg.setup()
             main_task = asyncio.create_task(dtg.run())
             yield

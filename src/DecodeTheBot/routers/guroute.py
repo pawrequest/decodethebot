@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from sqlmodel import Session
 from loguru import logger
 from pydantic import BaseModel, Field
-from pawsupport import fuis
+from pawsupport.fastui_ps import fastui_support as psf
 
 from DecodeTheBot.core.consts import PAGE_SIZE
 from DecodeTheBot.core.database import get_session
@@ -21,12 +21,12 @@ async def guru_view(guru_id: int, session: Session = Depends(get_session)) -> li
     # guru = Guru.model_validate(guru)
     # guru = Guru.model_validate(guru)
     if not isinstance(guru, Guru):
-        return fuis.empty_page()
+        return psf.empty_page()
 
     return dtg_default_page(
         title=guru.name,
         components=[
-            fuis.back_link(),
+            psf.back_link(),
             guru.ui_detail(),
         ],
     )
@@ -56,7 +56,7 @@ def guru_list_view(page: int = 1, session: Session = Depends(get_session)) -> li
 
     except Exception as e:
         logger.error(e)
-        return fuis.empty_page(nav_bar=dtg_navbar())
+        return psf.empty_page(nav_bar=dtg_navbar())
 
 
 class EpisodeGuruFilter(BaseModel):

@@ -1,13 +1,6 @@
-from asyncio import Queue
-
-from pawsupport import async_support as psa, sqlmodel_support as psql
+from loguru import logger
 from sqlalchemy import create_engine, text
-from sqlmodel import SQLModel, Session, select
-
-from .consts import logger, INIT_EPS
-from ..models.episode import Episode
-from ..models.guru import Guru
-from ..models.reddit_thread import RedditThread
+from sqlmodel import SQLModel, Session
 
 
 def engine_(config=None):
@@ -55,41 +48,3 @@ def trim_db(session):
         session.commit()
     except Exception as e:
         logger.error(e)
-
-
-@psa.quiet_cancel_try_log_as
-async def init_eps(session, queue: Queue):
-    ep_i = 0
-    max_eps = INIT_EPS
-    logger.info("Initialising episodes")
-    eps = []
-    ep = await queue.get()
-    ep = Episode.model_validate(ep)
-    eps.append(ep)
-    ep_i += 1
-    if ep_i >= max_eps:
-        return
-
-    eps = sorted(eps, key=lambda _: _.date)
-    for ep in eps:
-        if psql.obj_in_session(session, ep, Episode):
-            continue
-        logger.info(f"Adding {ep.title}")
-        session.add(ep)
-        thread_matches = psql.db_obj_matches(session, ep, RedditThread)
-        guru_matches = psql.db_obj_matches(session, ep, Guru)
-        psql.assign_rel(ep, RedditThread, thread_matches)
-        psql.assign_rel(ep, Guru, guru_matches)
-    if session.new:
-        session.commit()
-
-
-def gurus_from_file(session, infile):
-    with open(infile, "r") as f:
-        guru_names = f.read().split(",")
-    session_gurus = session.exec(select(Guru.name)).all()
-    if new_gurus := set(guru_names) - set(session_gurus):
-        logger.info(f"Adding {len(new_gurus)} new gurus")
-        gurus = [Guru(name=_) for _ in new_gurus]
-        session.add_all(gurus)
-        session.commit()

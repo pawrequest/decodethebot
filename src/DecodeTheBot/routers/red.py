@@ -1,6 +1,6 @@
 from fastui import AnyComponent, FastUI, components as c
 from fastapi import APIRouter, Depends
-from pawsupport.fastui_suport import fuis
+from pawsupport.fastui_ps import fastui_support as psf
 from sqlmodel import Session
 
 from ..core.consts import PAGE_SIZE
@@ -23,7 +23,7 @@ async def thread_view(
     return dtg_default_page(
         title=thread.title,
         components=[
-            fuis.back_link(),
+            psf.back_link(),
             thread.ui_detail(),
         ],
     )

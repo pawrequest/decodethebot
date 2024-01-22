@@ -4,8 +4,8 @@ from typing import Dict, List, Optional, TYPE_CHECKING
 
 from asyncpraw.models import Submission
 from fastui.components import Details
-from pawsupport import hash_simple_md5
-from pawsupport.fastui_suport.fuis import Flex
+from pawsupport.fastui_ps.fastui_support import Flex
+from pawsupport.misc_ps import hash_simple_md5
 from pydantic import field_validator
 from sqlalchemy import Column
 from sqlmodel import Field, JSON, Relationship, SQLModel
@@ -23,7 +23,7 @@ def submission_to_dict(submission: Submission):
         submission = vars(submission)
     return {k: v for k, v in submission.items() if isinstance(v, serializable_types)}
 
-
+ 
 class RedditThreadBase(SQLModel):
     reddit_id: str = Field(index=True, unique=True)
     title: str

@@ -1,135 +1,99 @@
 from __future__ import annotations
 
-from typing import Sequence, Union
+from functools import lru_cache
+from typing import Literal, Sequence, Union
 
 from fastui import components as c
-from fastui.events import GoToEvent
 from loguru import logger
-import pawsupport as ps
-from pawsupport.fastui_suport import fuis
-from pawsupport.fastui_suport.fuis import default_page
-from pawsupport.misc import title_from_snake
-from sqlalchemy import inspect
+from pawsupport.fastui_ps import fastui_support as psf
+from pawsupport import misc_ps as psm
+from pawsupport.sqlmodel_ps.sqlm import get_other_table_names
 
-from DecodeTheBot.ui.css import HEAD, PLAY_COL, SUB_LIST, TITLE_COL, TITLE
+from DecodeTheBot.ui.css import HEAD, SUB_LIST, TITLE, TITLE_COL
 
 
 def get_headers(header_names: list) -> c.Div:
     headers = [c.Div(components=[c.Text(text=_)], class_name=HEAD) for _ in header_names]
-    head_row = fuis.Row(components=headers, class_name=HEAD)
+    head_row = psf.Row(components=headers, class_name=HEAD)
     return head_row
 
 
 def objects_ui_with(objects: Sequence) -> c.Div:
+    """A column with rows for each object, including related objects."""
     try:
         ui_list = [_object_ui_with_related(_) for _ in objects]
         head_names = [_[0] for _ in ui_list[0]]
-        head_names = [title_from_snake(_) for _ in head_names]
+        head_names = [psm.title_from_snake(_) for _ in head_names]
         headers = get_headers(head_names)
-        rows = [fuis.Row([_[1] for _ in row_obj]) for row_obj in ui_list]
+        rows = [psf.Row([_[1] for _ in row_obj]) for row_obj in ui_list]
 
-        col = fuis.Col(components=[headers, *rows])
+        col = psf.Col(components=[headers, *rows])
         return col
     except Exception as e:
         logger.error(e)
 
 
 def objects_col(objects: Sequence, class_name_int="", class_name_ext="") -> c.Div:
+    """A column with rows for each object."""
     try:
         if not objects:
-            return fuis.empty_div(col=True)
+            return psf.empty_div(col=True)
         rows = [object_col_one(_, class_name_int) for _ in objects]
-        # col = Col(components=rows, class_name=class_name_ext)
-        col = fuis.Col(components=rows)
+        col = psf.Col(components=rows, class_name=class_name_ext)
         return col
     except Exception as e:
         logger.error(e)
 
 
 def object_col_one(obj, class_name="") -> Union[c.Div, c.Link]:
+    """A row for one object with no related objects."""
     if not obj:
-        return fuis.empty_div(col=True)
-    clink = ui_link(ps.title_or_name_val(obj), ps.misc.slug_or_none(obj))
-    return fuis.Col(components=[clink], class_name=class_name)
+        return psf.empty_div(col=True)
+    clink = psf.ui_link(psm.title_or_name_val(obj), obj.slug)
+    return psf.Col(components=[clink], class_name=class_name)
 
 
-def get_typs() -> list[str]:
+@lru_cache
+def other_table_names(obj) -> list[str]:
     from DecodeTheBot.core.types import data_models
 
-    typs = [ps.misc.to_snake(_.__name__) for _ in data_models()]
-    return typs
-
-
-def get_related_typs(obj) -> list[str]:
-    from DecodeTheBot.core.types import data_models
-
-    typs = [f"{ps.misc.to_snake(_.__name__)}s" for _ in data_models() if not isinstance(obj, _)]
-    return typs
+    return get_other_table_names(obj, data_models())
 
 
 def _object_ui_with_related(obj) -> list[tuple[str, c.Div]]:
+    """A tuple of (header_name, column) for title/name and related objects."""
     out_list = [
         (
             typ,
             objects_col(getattr(obj, typ), class_name_int=SUB_LIST, class_name_ext=SUB_LIST),
         )
-        for typ in get_related_typs(obj)
+        for typ in other_table_names(obj)
     ]
 
-    ident_name = ps.title_or_name_var(obj)
-    out_list.insert(1, (ident_name, title_column(obj)))
+    identity_header: Literal["name", "title"] = psm.title_or_name_var(obj)
+    out_list.insert(1, (identity_header, title_column(obj)))
     return out_list
 
 
-def title_column(obj) -> fuis.Col:
-    url = ps.misc.slug_or_none(obj)
-    title = ps.title_or_name_val(obj)
-    return fuis.Col(
+def title_column(obj) -> psf.Col:
+    url = obj.slug
+    title = psm.title_or_name_val(obj)
+    return psf.Col(
         class_name=TITLE_COL,
         components=[
-            ui_link(title, url),
+            psf.ui_link(title, url),
         ],
     )
-
-
-def play_column(url) -> fuis.Col:
-    res = fuis.Col(
-        class_name=PLAY_COL,
-        components=[
-            c.Link(
-                components=[c.Text(text="Play")],
-                on_click=GoToEvent(url=url),
-            ),
-        ],
-    )
-    return res
-
-
-def ui_link(title, url, on_click=None, class_name="") -> c.Link:
-    on_click = on_click or GoToEvent(url=url)
-    link = c.Link(components=[c.Text(text=title)], on_click=on_click, class_name=class_name)
-    return link
-
-
-def log_object_state(obj):
-    obj_name = obj.__class__.__name__
-    insp = inspect(obj)
-    logger.info(f"State of {obj_name}:")
-    logger.info(f"Transient: {insp.transient}")
-    logger.info(f"Pending: {insp.pending}")
-    logger.info(f"Persistent: {insp.persistent}")
-    logger.info(f"Detached: {insp.detached}")
-    logger.debug("finished")
 
 
 def dtg_navbar():
     from DecodeTheBot.core.types import data_models
 
-    return fuis.nav_bar_(data_models())
+    return psf.nav_bar_(data_models())
 
 
 def dtg_default_page(components, title=None):
-    return default_page(
+    return psf.default_page(
         title=title or "Decode The Guru",
         components=components,
         navbar=dtg_navbar(),

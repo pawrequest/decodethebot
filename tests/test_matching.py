@@ -1,10 +1,10 @@
 import pytest
 from loguru import logger
+from pawsupport.sqlmodel_ps.sqlm import db_obj_matches
 from sqlmodel import Session
 
 from src.DecodeTheBot.models.guru import Guru
 from src.DecodeTheBot.models.episode import Episode
-from src.DecodeTheBot.dtg_bot import db_obj_matches
 
 
 # @pytest.mark.asyncio

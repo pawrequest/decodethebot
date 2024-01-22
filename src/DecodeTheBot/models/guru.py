@@ -6,7 +6,7 @@ E           sqlalchemy.exc.InvalidRequestError: When initializing mapper Mapper[
 """
 from typing import List, Optional, TYPE_CHECKING
 
-from pawsupport.fastui_suport.fuis import Flex
+from pawsupport.fastui_ps.fastui_support import Flex
 from sqlmodel import Field, Relationship, SQLModel, select
 
 from .links import GuruEpisodeLink, RedditThreadGuruLink
@@ -20,10 +20,6 @@ if TYPE_CHECKING:
 class GuruBase(SQLModel):
     name: str = Field(index=True, unique=True)
 
-    @property
-    def slug(self):
-        return f"/guru/{self.id}"
-
 
 class Guru(GuruBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -33,6 +29,10 @@ class Guru(GuruBase, table=True):
     reddit_threads: List["RedditThread"] = Relationship(
         back_populates="gurus", link_model=RedditThreadGuruLink
     )
+
+    @property
+    def slug(self):
+        return f"/guru/{self.id}"
 
     @classmethod
     def rout_prefix(cls):

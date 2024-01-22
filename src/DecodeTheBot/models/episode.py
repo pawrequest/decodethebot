@@ -5,8 +5,8 @@ from typing import Dict, List, Optional, TYPE_CHECKING
 
 from episode_scraper import EpisodeDC
 from episode_scraper.writer import RPostWriter
-from pawsupport.fastui_suport.fuis import Flex
-from pawsupport.misc import hash_simple_md5
+from pawsupport.fastui_ps.fastui_support import Flex
+from pawsupport.misc_ps import hash_simple_md5
 from sqlmodel import Field, JSON, Relationship, SQLModel
 from dateutil import parser
 from pydantic import field_validator
