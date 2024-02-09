@@ -5,4 +5,4 @@
 *.log
 /data/
 /backups/
-/decodethebot/logs/
+logs/
