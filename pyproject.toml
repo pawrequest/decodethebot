@@ -14,6 +14,8 @@ dependencies = [
     "aiohttp",
     "loguru",
     "fastui",
+    "pawsupport",
+    "scraper",
 ]
 readme = "README.md"
 requires-python = ">= 3.8"
@@ -23,7 +25,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.rye]
-managed = false
+managed = true
 dev-dependencies = [
     "pytest",
     "pytest-asyncio",
