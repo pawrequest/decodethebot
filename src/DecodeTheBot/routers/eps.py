@@ -3,7 +3,7 @@ from fastui import AnyComponent, FastUI, components as c
 from fastapi import APIRouter, Depends
 from sqlmodel import Session, select
 from loguru import logger
-from pawsupport import fuis
+from pawsupport import fastui_ps as fuis
 
 from DecodeTheBot.core.consts import PAGE_SIZE
 from DecodeTheBot.core.database import get_session

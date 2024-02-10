@@ -6,9 +6,9 @@ from fastui import components as c
 from fastui.events import GoToEvent
 from loguru import logger
 import pawsupport as ps
-from pawsupport.fastui_suport import fuis
-from pawsupport.fastui_suport.fuis import default_page
-from pawsupport.misc import title_from_snake
+from pawsupport.fastui_ps import fastui_support as fuis
+from pawsupport.fastui_ps.fastui_support import default_page
+from pawsupport.get_set import title_from_snake, title_or_name_val, slug_or_none, title_or_name_var
 from sqlalchemy import inspect
 
 from DecodeTheBot.ui.css import HEAD, PLAY_COL, SUB_LIST, TITLE_COL, TITLE
@@ -49,7 +49,7 @@ def objects_col(objects: Sequence, class_name_int="", class_name_ext="") -> c.Di
 def object_col_one(obj, class_name="") -> Union[c.Div, c.Link]:
     if not obj:
         return fuis.empty_div(col=True)
-    clink = ui_link(ps.title_or_name_val(obj), ps.slug_or_none(obj))
+    clink = ui_link(title_or_name_val(obj), slug_or_none(obj))
     return fuis.Col(components=[clink], class_name=class_name)
 
 
@@ -76,14 +76,14 @@ def _object_ui_with_related(obj) -> list[tuple[str, c.Div]]:
         for typ in get_related_typs(obj)
     ]
 
-    ident_name = ps.title_or_name_var(obj)
+    ident_name = title_or_name_var(obj)
     out_list.insert(1, (ident_name, title_column(obj)))
     return out_list
 
 
 def title_column(obj) -> fuis.Col:
-    url = ps.slug_or_none(obj)
-    title = ps.title_or_name_val(obj)
+    url = slug_or_none(obj)
+    title = title_or_name_val(obj)
     return fuis.Col(
         class_name=TITLE_COL,
         components=[
@@ -111,21 +111,11 @@ def ui_link(title, url, on_click=None, class_name="") -> c.Link:
     return link
 
 
-def log_object_state(obj):
-    obj_name = obj.__class__.__name__
-    insp = inspect(obj)
-    logger.info(f"State of {obj_name}:")
-    logger.info(f"Transient: {insp.transient}")
-    logger.info(f"Pending: {insp.pending}")
-    logger.info(f"Persistent: {insp.persistent}")
-    logger.info(f"Detached: {insp.detached}")
-    logger.debug("finished")
-
 
 def dtg_navbar():
     from ..dtg_bot import DB_MODELS
 
-    return fuis.nav_bar_(DB_MODELS)
+    return fuis.nav_bar_from_routable(DB_MODELS)
 
 
 def dtg_default_page(components, title=None):
