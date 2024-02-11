@@ -6,7 +6,7 @@ E           sqlalchemy.exc.InvalidRequestError: When initializing mapper Mapper[
 """
 from typing import List, Optional, TYPE_CHECKING
 
-from pawsupport.fastui_suport.fuis import Flex
+from pawsupport.fastui_ps import Flex
 from sqlmodel import Field, Relationship, SQLModel, select
 
 from .links import GuruEpisodeLink, RedditThreadGuruLink

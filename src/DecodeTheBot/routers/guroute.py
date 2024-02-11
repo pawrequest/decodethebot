@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from sqlmodel import Session
 from loguru import logger
 from pydantic import BaseModel, Field
-from pawsupport import fuis
+from pawsupport import fastui_ps as fuis
 
 from DecodeTheBot.core.consts import PAGE_SIZE
 from DecodeTheBot.core.database import get_session

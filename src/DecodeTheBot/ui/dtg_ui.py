@@ -16,7 +16,7 @@ from DecodeTheBot.ui.css import HEAD, PLAY_COL, SUB_LIST, TITLE_COL, TITLE
 
 def get_headers(header_names: list) -> c.Div:
     headers = [c.Div(components=[c.Text(text=_)], class_name=HEAD) for _ in header_names]
-    head_row = fuis.Row(components=headers, class_name=HEAD)
+    head_row = fuis.Row(components=headers, row_class_name=HEAD)
     return head_row
 
 
@@ -50,7 +50,7 @@ def object_col_one(obj, class_name="") -> Union[c.Div, c.Link]:
     if not obj:
         return fuis.empty_div(col=True)
     clink = ui_link(title_or_name_val(obj), slug_or_none(obj))
-    return fuis.Col(components=[clink], class_name=class_name)
+    return fuis.Col(components=[clink], col_class=class_name)
 
 
 def get_typs() -> list[str]:
@@ -85,7 +85,7 @@ def title_column(obj) -> fuis.Col:
     url = slug_or_none(obj)
     title = title_or_name_val(obj)
     return fuis.Col(
-        class_name=TITLE_COL,
+        col_class=TITLE_COL,
         components=[
             ui_link(title, url),
         ],
@@ -94,7 +94,7 @@ def title_column(obj) -> fuis.Col:
 
 def play_column(url) -> fuis.Col:
     res = fuis.Col(
-        class_name=PLAY_COL,
+        col_class=PLAY_COL,
         components=[
             c.Link(
                 components=[c.Text(text="Play")],
