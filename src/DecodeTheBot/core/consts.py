@@ -4,7 +4,8 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
-from pawsupport import get_logger
+
+from pawsupport.logging_ps.tests.pawlogger.logger_factory import get_logger
 
 logger = get_logger("/data/logs/guru_log.log", "local")
 
