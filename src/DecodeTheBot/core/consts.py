@@ -5,9 +5,9 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from pawsupport.logging_ps.tests.pawlogger.logger_factory import get_logger
+from pawlogger.config_loguru import get_loguru
 
-logger = get_logger("/data/logs/guru_log.log", "local")
+logger = get_loguru("/data/logs/guru_log.log", "local")
 
 load_dotenv()
 PAGE_SIZE = int(os.environ.get("PAGE_SIZE", 20))

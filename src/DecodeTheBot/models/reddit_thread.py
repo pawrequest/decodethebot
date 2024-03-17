@@ -3,17 +3,16 @@ from datetime import datetime
 from typing import Dict, List, Optional, TYPE_CHECKING
 
 from asyncpraw.models import Submission
-from fastui.components import Details
-from pawsupport import hash_simple_md5
-from pawsupport.fastui_suport.fuis import Flex
-from pydantic import field_validator
-from sqlalchemy import Column
-from sqlmodel import Field, JSON, Relationship, SQLModel
+from fastui import components as c
+from pawsupport import get_set
+import pydantic as _p
+import sqlalchemy as sqa
+import sqlmodel as sqm
 
 from DecodeTheBot.models.links import RedditThreadEpisodeLink, RedditThreadGuruLink
 
 if TYPE_CHECKING:
-    from DecodeTheBot.models.episode import Episode
+    from DecodeTheBot.models.episode import EpisodeDB
     from DecodeTheBot.models.guru import Guru
 
 
@@ -24,14 +23,14 @@ def submission_to_dict(submission: Submission):
     return {k: v for k, v in submission.items() if isinstance(v, serializable_types)}
 
 
-class RedditThreadBase(SQLModel):
-    reddit_id: str = Field(index=True, unique=True)
+class RedditThreadBase(sqm.SQLModel):
+    reddit_id: str = sqm.Field(index=True, unique=True)
     title: str
     shortlink: str
     created_datetime: datetime
-    submission: Dict = Field(default=None, sa_column=Column(JSON))
+    submission: Dict = sqm.Field(default=None, sa_column=sqa.Column(sqa.JSON))
 
-    @field_validator("submission", mode="before")
+    @_p.field_validator("submission", mode="before")
     def validate_submission(cls, v):
         return submission_to_dict(v)
 
@@ -48,25 +47,25 @@ class RedditThreadBase(SQLModel):
 
 
 class RedditThread(RedditThreadBase, table=True, extend_existing=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: Optional[int] = sqm.Field(default=None, primary_key=True)
 
-    gurus: List["Guru"] = Relationship(
+    gurus: List["Guru"] = sqm.Relationship(
         back_populates="reddit_threads", link_model=RedditThreadGuruLink
     )
-    episodes: List["Episode"] = Relationship(
+    episodes: List["EpisodeDB"] = sqm.Relationship(
         back_populates="reddit_threads", link_model=RedditThreadEpisodeLink
     )
 
     @property
     def get_hash(self):
-        return hash_simple_md5([self.reddit_id])
+        return get_set.hash_simple_md5([self.reddit_id])
 
     @property
     def slug(self):
         return f"/red/{self.id}"
 
-    def ui_detail(self) -> Flex:
-        return Details(data=self)
+    def ui_detail(self):
+        return c.Details(data=self)
 
     @classmethod
     def rout_prefix(cls):

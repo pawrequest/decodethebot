@@ -5,15 +5,13 @@ E           sqlalchemy.exc.InvalidRequestError: When initializing mapper Mapper[
 
 """
 from typing import List, Optional, TYPE_CHECKING
-
-from pawsupport.fastui_ps import Flex
 from sqlmodel import Field, Relationship, SQLModel, select
 
 from .links import GuruEpisodeLink, RedditThreadGuruLink
 from ..ui.dtg_ui import objects_ui_with
 
 if TYPE_CHECKING:
-    from .episode import Episode
+    from .episode import EpisodeDB
     from .reddit_thread import RedditThread
 
 
@@ -28,7 +26,7 @@ class GuruBase(SQLModel):
 class Guru(GuruBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
 
-    episodes: List["Episode"] = Relationship(back_populates="gurus", link_model=GuruEpisodeLink)
+    episodes: List["EpisodeDB"] = Relationship(back_populates="gurus", link_model=GuruEpisodeLink)
 
     reddit_threads: List["RedditThread"] = Relationship(
         back_populates="gurus", link_model=RedditThreadGuruLink

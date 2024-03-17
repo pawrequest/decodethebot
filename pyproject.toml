@@ -5,25 +5,38 @@ description = "Decoding The Guru Podcast companion"
 authors = [
     { name = "pawrequest", email = "paw@pawrequest.com" }
 ]
+readme = "README.md"
+requires-python = ">= 3.12"
 dependencies = [
+    'asyncpraw',
+
     'sqlmodel',
-    "uvicorn",
+    "uvicorn[standard]",
     'fastapi',
     'pydantic',
     'python-dotenv',
     "aiohttp",
     "loguru",
     "fastui",
+    "scrapaw",
+    "pawlogger[loguru]",
+    "pawsupport",
+    "fastuipr",
 ]
-readme = "README.md"
-requires-python = ">= 3.8"
+[project.optional-dependencies]
+git = [
+    "scraper @ git+https://github.com/pawrequest/scraper",
+    "pawlogger[loguru] @ git+https://github.com/pawrequest/pawlogger",
+    "pawsupport @ git+https://github.com/pawrequest/pawsupport",
+    "fastuipr @ git+https://github.com/pawrequest/fastuipr",
+]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.rye]
-managed = false
+managed = true
 dev-dependencies = [
     "pytest",
     "pytest-asyncio",
@@ -31,7 +44,7 @@ dev-dependencies = [
 ]
 
 [tool.ruff]
-line-length = 100
+line-length = 120
 
 [tool.hatch.metadata]
 allow-direct-references = true

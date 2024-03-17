@@ -2,68 +2,82 @@ from __future__ import annotations
 
 from typing import Sequence, Union
 
-from fastui import components as c
+from fastui import components as c, events
 from fastui.events import GoToEvent
 from loguru import logger
-import pawsupport as ps
-from pawsupport.fastui_ps import fastui_support as fuis
-from pawsupport.fastui_ps.fastui_support import default_page
-from pawsupport.get_set import title_from_snake, title_or_name_val, slug_or_none, title_or_name_var
-from sqlalchemy import inspect
 
-from DecodeTheBot.ui.css import HEAD, PLAY_COL, SUB_LIST, TITLE_COL, TITLE
+from fastuipr import builders, styles
+from suppawt import convert, get_set
+from DecodeTheBot.ui.css import HEAD, PLAY_COL, SUB_LIST, TITLE, TITLE_COL
 
 
 def get_headers(header_names: list) -> c.Div:
     headers = [c.Div(components=[c.Text(text=_)], class_name=HEAD) for _ in header_names]
-    head_row = fuis.Row(components=headers, row_class_name=HEAD)
-    return head_row
+    return c.Div(components=[headers], class_name=HEAD)
 
 
 def objects_ui_with(objects: Sequence) -> c.Div:
     try:
-        ui_list = [_object_ui_with_related(_) for _ in objects]
-        head_names = [_[0] for _ in ui_list[0]]
-        head_names = [title_from_snake(_) for _ in head_names]
-        headers = get_headers(head_names)
-        rows = [fuis.Row([_[1] for _ in row_obj]) for row_obj in ui_list]
+        headers_and_rows = [_object_ui_with_related(_) for _ in objects]
 
-        col = fuis.Col(components=[headers, *rows])
-        return col
+        head_names = [_[0] for _ in headers_and_rows[0]]
+        head_names = [get_set.title_from_snake(_) for _ in head_names]
+        headers = get_headers(head_names)
+
+        rows = [
+            [_[1] for _ in row_obj]
+            for row_obj in headers_and_rows
+        ]
+
+        return builders.wrap_divs(
+            components=[
+                headers,
+                *rows,
+            ],
+            class_name=SUB_LIST,
+        )
     except Exception as e:
         logger.error(e)
 
 
-def objects_col(objects: Sequence, class_name_int="", class_name_ext="") -> c.Div:
+def objects_col(objects: Sequence) -> c.Div:
     try:
         if not objects:
-            return fuis.empty_div(col=True)
-        rows = [object_col_one(_, class_name_int) for _ in objects]
-        # col = Col(components=rows, class_name=class_name_ext)
-        col = fuis.Col(components=rows)
-        return col
+            return builders.empty_div(class_name=styles.COL_STYLE)
+        return builders.wrap_divs(
+            components=[object_col_one(_) for _ in objects],
+            class_name=styles.COL_STYLE,
+            inner_class_name=styles.ROW_STYLE,
+        )
     except Exception as e:
         logger.error(e)
 
 
-def object_col_one(obj, class_name="") -> Union[c.Div, c.Link]:
+def object_col_one(obj) -> Union[c.Div, c.Link]:
     if not obj:
-        return fuis.empty_div(col=True)
-    clink = ui_link(title_or_name_val(obj), slug_or_none(obj))
-    return fuis.Col(components=[clink], col_class=class_name)
+        return builders.empty_div(class_name=styles.COL_STYLE)
+    return builders.wrap_divs(
+        components=[
+            c.Link(
+                components=[c.Text(text=get_set.title_or_name_val(obj))],
+                on_click=events.GoToEvent(url=get_set.slug_or_none(obj)),
+            )
+        ],
+        class_name=styles.COL_STYLE
+    )
 
 
 def get_typs() -> list[str]:
     from ..dtg_bot import DB_MODELS
 
-    typs = [ps.misc.to_snake(_.__name__) for _ in DB_MODELS]
+    typs = [convert.to_snake(_.__name__) for _ in DB_MODELS]
     return typs
 
 
 def get_related_typs(obj) -> list[str]:
     from DecodeTheBot.dtg_bot import DB_MODELS
 
-    typs = [f"{ps.misc.to_snake(_.__name__)}s" for _ in DB_MODELS if not isinstance(obj, _)]
+    typs = [f"{get_set.to_snake(_.__name__)}s" for _ in DB_MODELS if not isinstance(obj, _)]
     return typs
 
 
@@ -71,30 +85,30 @@ def _object_ui_with_related(obj) -> list[tuple[str, c.Div]]:
     out_list = [
         (
             typ,
-            objects_col(getattr(obj, typ), class_name_int=SUB_LIST, class_name_ext=SUB_LIST),
+            objects_col(getattr(obj, typ)),
         )
         for typ in get_related_typs(obj)
     ]
 
-    ident_name = title_or_name_var(obj)
+    ident_name = get_set.title_or_name_var(obj)
     out_list.insert(1, (ident_name, title_column(obj)))
     return out_list
 
 
-def title_column(obj) -> fuis.Col:
-    url = slug_or_none(obj)
-    title = title_or_name_val(obj)
-    return fuis.Col(
-        col_class=TITLE_COL,
+def title_column(obj):
+    url = get_set.slug_or_none(obj)
+    title = get_set.title_or_name_val(obj)
+    return builders.wrap_divs(
+        class_name=TITLE_COL,
         components=[
             ui_link(title, url),
         ],
     )
 
 
-def play_column(url) -> fuis.Col:
-    res = fuis.Col(
-        col_class=PLAY_COL,
+def play_column(url):
+    res = builders.wrap_divs(
+        class_name=PLAY_COL,
         components=[
             c.Link(
                 components=[c.Text(text="Play")],
@@ -111,18 +125,10 @@ def ui_link(title, url, on_click=None, class_name="") -> c.Link:
     return link
 
 
-
-def dtg_navbar():
-    from ..dtg_bot import DB_MODELS
-
-    return fuis.nav_bar_from_routable(DB_MODELS)
-
-
 def dtg_default_page(components, title=None):
-    return default_page(
+    return builders.default_page(
         title=title or "Decode The Guru",
         components=components,
-        navbar=dtg_navbar(),
         header_class=TITLE,
         # page_classname=PAGE,
     )
