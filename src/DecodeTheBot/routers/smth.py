@@ -1,7 +1,7 @@
 from fastapi import Depends
 from fastui import AnyComponent, FastUI, components as c
-from pawsupport.fastui_suport.fuis import RoutableModel
-from pawsupport.misc import snake_name, snake_name_s
+from suppawt.fastui_suport.fuis import RoutableModel
+from suppawt.misc import snake_name, snake_name_s
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 

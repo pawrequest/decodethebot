@@ -20,14 +20,14 @@ dependencies = [
     "fastui",
     "scrapaw",
     "pawlogger[loguru]",
-    "pawsupport",
+    "suppawt",
     "fastuipr",
 ]
 [project.optional-dependencies]
 git = [
     "scraper @ git+https://github.com/pawrequest/scraper",
     "pawlogger[loguru] @ git+https://github.com/pawrequest/pawlogger",
-    "pawsupport @ git+https://github.com/pawrequest/pawsupport",
+    "suppawt @ git+https://github.com/pawrequest/suppawt",
     "fastuipr @ git+https://github.com/pawrequest/fastuipr",
 ]
 

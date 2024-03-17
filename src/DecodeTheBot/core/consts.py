@@ -22,7 +22,9 @@ if not PODCAST_URL:
     raise ValueError("PODCAST_URL must be provided")
 GURU_NAMES_FILE = Path(os.environ.get("GURU_NAMES_FILE", "gurunames.txt"))
 SCRAPER_SLEEP = int(os.environ.get("SCRAPER_SLEEP", 60 * 10))
+REDDIT_SLEEP = int(os.environ.get("REDDIT_SLEEP", 60 * 10))
 INIT_EPS = os.environ.get("INIT_EPS", "False").lower() == "true"
-MAX_DUPES = 3
+MAX_DUPES = int(os.environ.get("MAX_DUPES", 3))
 DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
 TRIM_DB = os.environ.get("TRIM_DB", "False").lower() == "true"
+EPISODE_SCRAPE_LIMIT = int(os.environ.get("EPISODE_SCRAPE_LIMIT", 3))

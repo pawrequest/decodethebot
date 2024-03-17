@@ -22,7 +22,7 @@ load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    async with DTG.minimum_context() as dtg:  # noqa E1120 pycharm bug reported
+    async with DTG.from_env() as dtg:  # noqa E1120 pycharm bug reported
         try:
             create_db()
             logger.info("tables created")

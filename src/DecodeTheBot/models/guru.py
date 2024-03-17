@@ -11,7 +11,7 @@ from .links import GuruEpisodeLink, RedditThreadGuruLink
 from ..ui.dtg_ui import objects_ui_with
 
 if TYPE_CHECKING:
-    from .episode import EpisodeDB
+    from .episodedb import DTGEpisodeDB
     from .reddit_thread import RedditThread
 
 
@@ -26,7 +26,7 @@ class GuruBase(SQLModel):
 class Guru(GuruBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
 
-    episodes: List["EpisodeDB"] = Relationship(back_populates="gurus", link_model=GuruEpisodeLink)
+    episodes: List["DTGEpisodeDB"] = Relationship(back_populates="gurus", link_model=GuruEpisodeLink)
 
     reddit_threads: List["RedditThread"] = Relationship(
         back_populates="gurus", link_model=RedditThreadGuruLink
@@ -40,7 +40,7 @@ class Guru(GuruBase, table=True):
     def interest(self):
         return len(self.episodes) + len(self.reddit_threads)
 
-    def ui_detail(self) -> Flex:
+    def ui_detail(self):
         return objects_ui_with([self])
 
     # @property

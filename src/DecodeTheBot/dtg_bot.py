@@ -1,5 +1,6 @@
 import asyncio
 from asyncio import Queue
+from contextlib import asynccontextmanager
 from functools import lru_cache
 from typing import AsyncGenerator, TypeVar, Union
 
@@ -8,18 +9,18 @@ from asyncpraw.models import Subreddit
 from dotenv import load_dotenv
 import sqlmodel as sqm
 
+import redditbot
 import scrapaw
 from pawdantic.pawsql import sqlpr
-from scrapaw.abs import DupeError, MaxDupesError, dupes_not_exceeded
-from suppawt import async_, get_set
+from scrapaw import abs, dtg
+from suppawt import get_set
+from .core import consts
 from .core.consts import (
     GURU_NAMES_FILE,
-    MAX_DUPES,
-    SCRAPER_SLEEP,
     logger,
 )
 from .core.database import engine_
-from .models.episodedb import DTGEpisodeDB, DTGEpisodeOut
+from .models.episodedb import DTGEpisodeDB
 from .models.guru import Guru
 from .models.reddit_thread import RedditThread
 from .models.links import GuruEpisodeLink, RedditThreadEpisodeLink, RedditThreadGuruLink
@@ -38,49 +39,60 @@ class DTG:
     def __init__(
             self,
             subreddit: Subreddit,
-            sqlm_session: sqm.Session | None = None,
-            queue: Queue | None = None,
+            sqm_session: sqm.Session | None = None,
+            queue_ep: Queue | None = None,
+            queue_red: Queue | None = None,
             http_session: ClientSession | None = None,
+            # podcast: scrapaw.DTGPodcast | None = None,
     ):
-        self.session_q: sqm.Session = sqlm_session or sqm.Session(engine_())
-        self.session_h = http_session or ClientSession()
         self.subreddit = subreddit
-        self.queue_ep = queue
-        self.queue_red = queue
-        self.tasks = list()
-        self.podcast = scrapaw.DTGPodcast()
 
-    # @classmethod
-    # @asynccontextmanager
-    # async def minimum_context(
-    #         cls, sub_name: str = consts.SUBREDDIT_NAME, podcast_url: str = PODCAST_URL
-    # ) -> "DTG":
-    #     process_qu = asyncio.Queue()
-    #     with Session(engine_()) as session:
-    #         # backup_bot = SQLModelBackup(session, model_map_(), BACKUP_JSON, output_dir=BACKUP_DIR)
-    #         # pruner = Pruner(backup_target=BACKUP_JSON, output_dir=BACKUP_DIR)
-    #
-    #         async with ClientSession() as http_session:
-    #             podcast = scrapaw.DTGPodcast()
-    #
-    #             async with subreddit_cm(
-    #                     sub_name=sub_name
-    #             ) as subreddit:  # noqa E1120 pycharm bug reported
-    #                 try:
-    #                     yield cls(
-    #                         session=session,
-    #                         subreddit=subreddit,
-    #                         queue=process_qu,
-    #                         http_session=http_session,
-    #                     )
-    #                 finally:
-    #                     # await http_session.close()
-    #                     ...
+        self.sqm_session: sqm.Session = sqm_session or sqm.Session(engine_())
+        self.http_session = http_session or ClientSession()
+        self.queue_ep = queue_ep or Queue()
+        self.queue_red = queue_red or Queue()
+        # self.podcast = podcast or scrapaw.DTGPodcast()
+        self.tasks = list()
+
+    @classmethod
+    @asynccontextmanager
+    async def from_env(
+            cls,
+    ) -> "DTG":
+        with sqm.Session(engine_()) as sqmsesh:
+            async with ClientSession() as http_session:
+                async with redditbot.subreddit_cm(
+                        sub_name=consts.SUBREDDIT_NAME
+                ) as subreddit:  # noqa E1120 pycharm bug reported
+                    try:
+                        yield cls(
+                            sqm_session=sqmsesh,
+                            subreddit=subreddit,
+                            http_session=http_session,
+                        )
+                    finally:
+                        await http_session.close()
+
+        # with sqm.Session(engine_()) as sqmsesh:
+        #     async with (
+        #         ClientSession() as session_h,
+        #         redditbot.subreddit_cm(sub_name=consts.SUBREDDIT_NAME) as subreddit # noqa E1120 pycharm bug reported
+        #     ):
+        #
+        #         try:
+        #             yield cls(
+        #                 sqm_session=sqmsesh,
+        #                 subreddit=subreddit,
+        #                 http_session=session_h,
+        #             )
+        #         finally:
+        #             await session_h.close()
+        #             ...
 
     # @ps.quiet_cancel_try_log_as
     async def run(self):
         logger.info("Initialised")
-        with self.session_q as session:
+        with self.sqm_session as session:
             gurus_from_file(session, GURU_NAMES_FILE)
 
             # if RESTORE_FROM_JSON:
@@ -94,9 +106,10 @@ class DTG:
                 # asyncio.create_task(
                 #     ps.backup_copy_prune(self.backup_bot, self.pruner, BACKUP_SLEEP)
                 # ),
-                asyncio.create_task(self.q_episodes()),
-                # asyncio.create_task(self.q_threads()),
-                # asyncio.create_task(self.process_queue()),
+                asyncio.create_task(self.schedule_episode_q()),
+                asyncio.create_task(self.process_ep_queue()),
+                asyncio.create_task(self.schedule_thread_q()),
+                asyncio.create_task(self.process_thread_queue()),
             ]
             logger.info("Tasks created")
 
@@ -107,95 +120,89 @@ class DTG:
             task.cancel()
         await asyncio.gather(*self.tasks)
 
-    @async_.quiet_cancel_try_log_as
-    async def q_episodes(self):
-        episodes = self.session_q.exec(sqm.select(DTGEpisodeDB)).all()
-        dtg_eps = [DTGEpisodeOut.model_validate(_) for _ in episodes]
-        podcast = scrapaw.DTGPodcast(episodes=dtg_eps)
-
+    async def schedule_episode_q(self):
         while True:
-            dupes = 0
-
             try:
-                async for ep in self.podcast.get_episodes(
-                        session_h=self.session_h,
-                        max_dupes=MAX_DUPES
-                ):
+                await self.q_episodes()
+            except abs.MaxDupeError:
+                logger.info('Maximum Duplicate Episodes Reached')
 
-                    await self.not_in_sesh(ep)
-                    except DupeError:
-                        dupes += 1
-                        try:
-                            await dupes_not_exceeded(dupes)
-                            continue
-                        except MaxDupesError:
-                            break
+            logger.debug(f"Sleeping for {consts.SCRAPER_SLEEP} seconds")
+            await asyncio.sleep(consts.SCRAPER_SLEEP)
 
-            #     podcast.episodes.append(ep)
-            #     await self.queue_ep.put(ep)
-            #
-            # logger.debug(f"Sleeping for {SCRAPER_SLEEP} seconds")
-            # await asyncio.sleep(SCRAPER_SLEEP)
-
-    async def not_in_sesh(self, ep):
-        if sqlpr.obj_in_session(self.session_q, ep, DTGEpisodeDB):
-            raise DupeError(f"Duplicate episode found: {ep.url}")
-
-    @async_.quiet_cancel_try_log_as
-    async def q_threads(self):
-        sub_stream = self.subreddit.stream.submissions(skip_existing=False)
-        async for sub in sub_stream:
+    async def schedule_thread_q(self):
+        while True:
             try:
-                thread = RedditThread.from_submission(sub)
+                await self.q_threads()
+            except abs.MaxDupeError:
+                logger.info('Maximum Duplicate Threads Reached')
 
-                if sqlpr.obj_in_session(self.session_q, thread, RedditThread):
-                    continue
+            logger.debug(f"RedditBot Sleeping for {consts.REDDIT_SLEEP} seconds")
+            await asyncio.sleep(consts.REDDIT_SLEEP)
 
-                await self.queue_red.put(thread)
-            except Exception as e:
-                logger.error(f"Error getting thread from submission: {e}")
+    async def q_episodes(self, max_dupes: int = consts.MAX_DUPES):
+        dupes = 0
+        async for ep_ in dtg.get_episodes_blind(
+                base_url=consts.PODCAST_URL,
+                session_h=self.http_session,
+                # limit=consts.EPISODE_SCRAPE_LIMIT,
+        ):
+            ep = DTGEpisodeDB.model_validate(ep_)
+            if sqlpr.obj_in_session(self.sqm_session, ep):
+                dupes += 1
+                if dupes > max_dupes:
+                    raise abs.MaxDupeError(f"Max dupes reached: {max_dupes}")
+                continue
 
-    # @async_.quiet_cancel_try_log_as
-    # async def process_queue(self):
-    #     while True:
-    #         instance = await self.queue.get()
-    #         matches_d = await self.all_matches(instance)
-    #         matches_n = sum([len(_) for _ in matches_d.values()])
-    #         if isinstance(instance, RedditThread) and not matches_n:
-    #             continue
-    #         self.session_q.add(instance)
-    #         await sqlpr.assign_all(instance, matches_d)
-    #         logger.info(
-    #             f"Processing {instance.__class__.__name__} - {get_set.title_or_name_val(instance)}"
-    #         )
-    #         self.session_q.commit()
-    #         self.queue.task_done()
+            await self.queue_ep.put(ep)
 
-    @async_.quiet_cancel_try_log_as
+    async def q_threads(self, max_dupes: int = consts.MAX_DUPES):
+        dupes = 0
+        async for sub in self.subreddit.stream.submissions(skip_existing=False):
+            thread = RedditThread.from_submission(sub)
+            if sqlpr.obj_in_session(self.sqm_session, thread):
+                dupes += 1
+                if dupes > max_dupes:
+                    raise abs.MaxDupeError(f"Max dupes reached: {max_dupes}")
+                continue
+
+            await self.queue_red.put(thread)
+
     async def process_ep_queue(self):
         while True:
-            episode = await self.queue_ep.get()
+            episode_ = await self.queue_ep.get()
+            episode = DTGEpisodeDB.model_validate(episode_)
 
-            gurus = db_obj_matches(self.session_q, episode, Guru)
-            threads = db_obj_matches(self.session_q, episode, RedditThread)
-            matches_n = len(gurus) + len(threads)
-            episode.
+            gurus = db_obj_matches(self.sqm_session, episode, Guru)
+            threads = db_obj_matches(self.sqm_session, episode, RedditThread)
+            episode.gurus.extend(gurus)
+            episode.reddit_threads.extend(threads)
 
-            self.session_q.add(episode)
+            self.sqm_session.add(episode)
 
-            await sqlpr.assign_all(episode, matches_d)
             logger.info(
                 f"Processing {episode.__class__.__name__} - {get_set.title_or_name_val(episode)}"
             )
-            self.session_q.commit()
-            self.queue.task_done()
+            self.sqm_session.commit()
+            self.queue_ep.task_done()
 
-    async def all_matches(self, instance: DB_MODEL_TYPE) -> dict[str, list[DB_MODEL_TYPE]]:
-        res = {
-            get_set.snake_name_s(match_type): db_obj_matches(self.session_q, instance, match_type)
-            for match_type in DB_MODELS
-        }
-        return res
+    async def process_thread_queue(self):
+        while True:
+            thread_ = await self.queue_red.get()
+            thread = RedditThread.model_validate(thread_)
+
+            gurus = db_obj_matches(self.sqm_session, thread, Guru)
+            episodes = db_obj_matches(self.sqm_session, thread, DTGEpisodeDB)
+            thread.gurus.extend(gurus)
+            thread.episodes.extend(episodes)
+
+            self.sqm_session.add(thread)
+
+            logger.info(
+                f"Processing {thread.__class__.__name__} - {get_set.title_or_name_val(thread)}"
+            )
+            self.sqm_session.commit()
+            self.queue_red.task_done()
 
 
 def db_obj_matches(

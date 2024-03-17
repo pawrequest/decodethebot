@@ -4,7 +4,7 @@ from typing import Dict, List, Optional, TYPE_CHECKING
 
 from asyncpraw.models import Submission
 from fastui import components as c
-from pawsupport import get_set
+from suppawt import get_set
 import pydantic as _p
 import sqlalchemy as sqa
 import sqlmodel as sqm
@@ -12,7 +12,7 @@ import sqlmodel as sqm
 from DecodeTheBot.models.links import RedditThreadEpisodeLink, RedditThreadGuruLink
 
 if TYPE_CHECKING:
-    from DecodeTheBot.models.episode import EpisodeDB
+    from DecodeTheBot.models.episodedb import DTGEpisodeDB
     from DecodeTheBot.models.guru import Guru
 
 
@@ -52,7 +52,7 @@ class RedditThread(RedditThreadBase, table=True, extend_existing=True):
     gurus: List["Guru"] = sqm.Relationship(
         back_populates="reddit_threads", link_model=RedditThreadGuruLink
     )
-    episodes: List["EpisodeDB"] = sqm.Relationship(
+    episodes: List["DTGEpisodeDB"] = sqm.Relationship(
         back_populates="reddit_threads", link_model=RedditThreadEpisodeLink
     )
 

@@ -28,7 +28,7 @@ from loguru import logger as _logger
 # from main import app
 #
 from asyncpraw import Reddit
-from pawsupport import get_logger
+from suppawt import get_logger
 from sqlalchemy import StaticPool, create_engine
 from sqlmodel import SQLModel, Session
 

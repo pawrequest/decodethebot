@@ -1,8 +1,8 @@
 from fastui import AnyComponent, FastUI, components as c
 from fastapi import APIRouter, Depends
-from pawsupport.fastui_suport import fuis
 from sqlmodel import Session
 
+from fastuipr import builders
 from ..core.consts import PAGE_SIZE
 from ..core.database import get_session
 from ..models.guru import guru_filter_init
@@ -23,7 +23,7 @@ async def thread_view(
     return dtg_default_page(
         title=thread.title,
         components=[
-            fuis.back_link(),
+            builders.back_link(),
             thread.ui_detail(),
         ],
     )
