@@ -9,7 +9,8 @@ from DecodeTheBot.core.consts import PAGE_SIZE
 from DecodeTheBot.core.database import get_session
 from DecodeTheBot.models.reddit_thread import RedditThread
 from DecodeTheBot.routers.red import router
-from DecodeTheBot.ui.dtg_ui import dtg_default_page, objects_ui_with
+from DecodeTheBot.ui.dtg_ui import dtg_default_page
+from fastuipr.from_dtg import objects_ui_with
 
 
 def filter_factory(model):

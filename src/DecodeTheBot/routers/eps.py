@@ -5,13 +5,15 @@ from fastapi import APIRouter, Depends
 from sqlmodel import Session, select
 from loguru import logger
 
+import DecodeTheBot.ui.dtg_ui
+from DecodeTheBot.models import responses
 from fastuipr import builders
 from DecodeTheBot.core.consts import PAGE_SIZE
 from DecodeTheBot.core.database import get_session
 from DecodeTheBot.models.episodedb import DTGEpisodeDB
 from DecodeTheBot.models.guru import Guru
 from DecodeTheBot.routers.guroute import guru_filter
-from DecodeTheBot.ui.dtg_ui import dtg_default_page, objects_ui_with
+from DecodeTheBot.ui.dtg_ui import dtg_default_page
 
 router = APIRouter()
 
@@ -19,35 +21,42 @@ router = APIRouter()
 # FastUI
 @router.get("/{ep_id}", response_model=FastUI, response_model_exclude_none=True)
 async def episode_view(ep_id: int, session: Session = Depends(get_session)) -> list[AnyComponent]:
-    episode = session.get(DTGEpisodeDB, ep_id)
-    if not isinstance(episode, DTGEpisodeDB):
-        return dtg_default_page([c.Text(text="Episode not found")], "Episode not found")
-
-    return dtg_default_page([builders.back_link(), episode.ui_detail()], episode.title)
+    episode_ = session.get(DTGEpisodeDB, ep_id)
+    episode = responses.DTGEpisodeOut.model_validate(episode_, from_attributes=True)
+    return dtg_default_page(
+        components=[
+            builders.back_link(),
+            DecodeTheBot.ui.dtg_ui.episode_detail(episode) if episode else c.Text(text="Episode not found"),
+        ],
+        title=episode.title
+    )
 
 
 @router.get("/", response_model=FastUI, response_model_exclude_none=True)
 def episode_list_view(
-    page: int = 1, guru_name: str | None = None, session: Session = Depends(get_session)
+        page: int = 1, guru_name: str | None = None, session: Session = Depends(get_session)
 ) -> list[AnyComponent]:
     logger.info("episode_filter")
-    data, filter_form_initial = guru_filter_init(guru_name, session, DTGEpisodeDB)
-    data.sort(key=lambda x: x.date, reverse=True)
+    episodes_, filter_form_initial = guru_filter_init(guru_name, session, DTGEpisodeDB)
+    episodes = [responses.DTGEpisodeOut.model_validate(_, from_attributes=True) for _ in episodes_]
+    episodes.sort(key=lambda x: x.date, reverse=True)
 
-    total = len(data)
-    data = data[(page - 1) * PAGE_SIZE : page * PAGE_SIZE]
+    total = len(episodes)
+    episodes = episodes[(page - 1) * PAGE_SIZE: page * PAGE_SIZE]
+    episode_rows = [DecodeTheBot.ui.dtg_ui.episode_row(episode) for episode in episodes]
 
     return dtg_default_page(
         title="Episodes",
         components=[
             guru_filter(filter_form_initial, "episodes"),
-            objects_ui_with(data),
+            *episode_rows,
             c.Pagination(page=page, page_size=PAGE_SIZE, total=total),
         ],
     )
 
 
-def guru_filter_init(guru_name:str, session:sqlmodel.Session, clazz:type[sqlmodel.SQLModel]) -> tuple[list[sqlmodel.SQLModel], dict]:
+def guru_filter_init(guru_name: str, session: sqlmodel.Session, clazz: type[sqlmodel.SQLModel]) -> \
+        tuple[list[sqlmodel.SQLModel], dict]:
     filter_form_initial = {}
     if guru_name:
         guru = session.exec(select(Guru).where(Guru.name == guru_name)).one()

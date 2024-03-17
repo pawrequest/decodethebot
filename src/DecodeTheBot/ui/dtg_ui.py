@@ -1,134 +1,204 @@
 from __future__ import annotations
 
-from typing import Sequence, Union
-
+import fastui
 from fastui import components as c, events
-from fastui.events import GoToEvent
-from loguru import logger
+from sqlmodel import select
 
+from DecodeTheBot.models import guru
+from DecodeTheBot.ui import dtg_styles
 from fastuipr import builders, styles
-from suppawt import convert, get_set
-from DecodeTheBot.ui.css import HEAD, PLAY_COL, SUB_LIST, TITLE, TITLE_COL
+from DecodeTheBot.ui.dtg_styles import TITLE
 
 
-def get_headers(header_names: list) -> c.Div:
-    headers = [c.Div(components=[c.Text(text=_)], class_name=HEAD) for _ in header_names]
-    return c.Div(components=[headers], class_name=HEAD)
-
-
-def objects_ui_with(objects: Sequence) -> c.Div:
-    try:
-        headers_and_rows = [_object_ui_with_related(_) for _ in objects]
-
-        head_names = [_[0] for _ in headers_and_rows[0]]
-        head_names = [get_set.title_from_snake(_) for _ in head_names]
-        headers = get_headers(head_names)
-
-        rows = [
-            [_[1] for _ in row_obj]
-            for row_obj in headers_and_rows
-        ]
-
-        return builders.wrap_divs(
-            components=[
-                headers,
-                *rows,
-            ],
-            class_name=SUB_LIST,
-        )
-    except Exception as e:
-        logger.error(e)
-
-
-def objects_col(objects: Sequence) -> c.Div:
-    try:
-        if not objects:
-            return builders.empty_div(class_name=styles.COL_STYLE)
-        return builders.wrap_divs(
-            components=[object_col_one(_) for _ in objects],
-            class_name=styles.COL_STYLE,
-            inner_class_name=styles.ROW_STYLE,
-        )
-    except Exception as e:
-        logger.error(e)
-
-
-def object_col_one(obj) -> Union[c.Div, c.Link]:
-    if not obj:
-        return builders.empty_div(class_name=styles.COL_STYLE)
-    return builders.wrap_divs(
-        components=[
-            c.Link(
-                components=[c.Text(text=get_set.title_or_name_val(obj))],
-                on_click=events.GoToEvent(url=get_set.slug_or_none(obj)),
-            )
-        ],
-        class_name=styles.COL_STYLE
-    )
-
-
-def get_typs() -> list[str]:
-    from ..dtg_bot import DB_MODELS
-
-    typs = [convert.to_snake(_.__name__) for _ in DB_MODELS]
-    return typs
-
-
-def get_related_typs(obj) -> list[str]:
-    from DecodeTheBot.dtg_bot import DB_MODELS
-
-    typs = [f"{get_set.to_snake(_.__name__)}s" for _ in DB_MODELS if not isinstance(obj, _)]
-    return typs
-
-
-def _object_ui_with_related(obj) -> list[tuple[str, c.Div]]:
-    out_list = [
-        (
-            typ,
-            objects_col(getattr(obj, typ)),
-        )
-        for typ in get_related_typs(obj)
-    ]
-
-    ident_name = get_set.title_or_name_var(obj)
-    out_list.insert(1, (ident_name, title_column(obj)))
-    return out_list
-
-
-def title_column(obj):
-    url = get_set.slug_or_none(obj)
-    title = get_set.title_or_name_val(obj)
-    return builders.wrap_divs(
-        class_name=TITLE_COL,
-        components=[
-            ui_link(title, url),
-        ],
-    )
-
-
-def play_column(url):
-    res = builders.wrap_divs(
-        class_name=PLAY_COL,
-        components=[
-            c.Link(
-                components=[c.Text(text="Play")],
-                on_click=GoToEvent(url=url),
-            ),
-        ],
-    )
-    return res
-
-
-def ui_link(title, url, on_click=None, class_name="") -> c.Link:
-    on_click = on_click or GoToEvent(url=url)
-    link = c.Link(components=[c.Text(text=title)], on_click=on_click, class_name=class_name)
-    return link
-
-
-def dtg_default_page(components, title=None):
+def dtg_default_page(components: list[fastui.AnyComponent] | None, title=None):
+    title_ = title or "Decode The Guru"
     return builders.default_page(
-        title=title or "Decode The Guru",
+        title=title_,
         components=components,
         header_class=TITLE,
-        # page_classname=PAGE,
+    ) if components else builders.empty_page(title=title_ + " - Empty Page")
+
+
+def threads_div(threads_, class_name) -> c.Div:
+    return builders.wrap_divs(
+        components=[
+            title_sluglink_div(thread_, class_name=styles.ROW_STYLE)
+            for thread_ in threads_
+        ],
+        class_name=class_name,
     )
+
+
+def gurus_div(gurus_, class_name) -> c.Div:
+    return builders.wrap_divs(
+        components=[
+            name_sluglink_div(guru_, class_name=styles.ROW_STYLE)
+            for guru_ in gurus_
+        ],
+        class_name=class_name,
+    )
+
+
+def episodes_div(episodes_: list, class_name) -> c.Div:
+    return builders.wrap_divs(
+        components=[
+            title_sluglink_div(episode, class_name=styles.ROW_STYLE)
+            for episode in episodes_
+        ],
+        class_name=class_name,
+    )
+
+
+def date_div(date, class_name) -> c.Div:
+    return c.Div(
+        components=[
+            c.Text(text=str(date)),
+        ],
+        class_name=class_name,
+    )
+
+
+def episode_detail(episode) -> c.Div:
+    top_row = builders.wrap_divs(
+        components=[
+            date_div(episode.date, class_name=dtg_styles.DATE_COL),
+            ep_number_div(episode),
+
+        ],
+        class_name=styles.ROW_STYLE,
+    )
+    return builders.wrap_divs(
+        components=[
+            top_row,
+            links_div(
+                links=episode.links,
+                class_name=styles.ROW_STYLE,
+                inner_class_name=dtg_styles.NAMELINK,
+            ),
+            notes_div(episode.notes, dtg_styles.NOTES),
+        ],
+        class_name=dtg_styles.EPISODE_DETAIL,
+    )
+
+
+def links_div(links: dict[str, str], class_name, inner_class_name=None):
+    return builders.wrap_divs(
+        components=[
+            c.Link(
+                components=[
+                    c.Text(text=name),
+                ],
+                on_click=events.GoToEvent(url=url),
+            )
+            for name, url in links.items()
+        ],
+        class_name=class_name,
+        inner_class_name=inner_class_name,
+    )
+
+
+def ep_number_div(episode, class_name=dtg_styles.NUMBER_COL):
+    return c.Div(
+        components=[
+            c.Link(
+                components=[
+                    c.Text(text=f'Episode Number {episode.number.strip()}')
+                ],
+                on_click=events.GoToEvent(url=episode.url),
+            ),
+        ],
+        class_name=class_name
+    )
+
+
+def name_link(name, url):
+    return c.Link(
+        components=[c.Text(text=name)],
+        on_click=events.GoToEvent(url=url),
+        class_name=dtg_styles.NAMELINK
+    )
+
+
+def notes_div(notes, class_name):
+    col = builders.wrap_divs(
+        components=[c.Text(text=note) for note in notes],
+        class_name=f'{styles.COL_STYLE}',
+        inner_class_name=styles.ROW_STYLE,
+    )
+    return c.Div(
+        components=[col],
+        class_name=f'{styles.ROW_STYLE} w-75',
+    )
+
+
+def episode_row(episode) -> c.Div:
+    return builders.wrap_divs(
+        components=[
+            gurus_div(episode.gurus, class_name=styles.COL_STYLE),
+            episodes_div([episode], class_name=styles.COL_STYLE),
+            threads_div(episode.reddit_threads, class_name=styles.COL_STYLE),
+        ],
+        class_name=styles.ROW_STYLE,
+    )
+
+
+def guru_row(guru_) -> c.Div:
+    return builders.wrap_divs(
+        components=[
+            gurus_div([guru_], class_name=styles.COL_STYLE),
+            episodes_div(guru_.episodes, class_name=styles.COL_STYLE),
+            threads_div(guru_.reddit_threads, class_name=styles.COL_STYLE),
+        ],
+        class_name=styles.ROW_STYLE,
+    )
+
+
+def thread_row(thread_) -> c.Div:
+    return builders.wrap_divs(
+        components=[
+            gurus_div(thread_.gurus),
+            episodes_div(thread_.episodes),
+            threads_div([thread_]),
+        ],
+        class_name=styles.ROW_STYLE,
+    )
+
+
+def name_sluglink_div(obj, class_name) -> c.Div:
+    return c.Div(
+        components=[
+            c.Link(
+                components=[
+                    c.Text(text=obj.name),
+                ],
+                on_click=events.GoToEvent(url=obj.slug),
+            ),
+        ],
+        class_name=class_name,
+    )
+
+
+def title_sluglink_div(obj, class_name) -> c.Div:
+    return c.Div(
+        components=[
+            c.Link(
+                components=[
+                    c.Text(text=obj.title),
+                ],
+                on_click=events.GoToEvent(url=obj.slug),
+            ),
+        ],
+        class_name=class_name,
+    )
+
+
+def guru_filter_init(guru_name, session, clazz):
+    filter_form_initial = {}
+    if guru_name:
+        guru_ = session.exec(select(guru.Guru).where(guru.Guru.name == guru_name)).one()
+        statement = select(clazz).where(clazz.gurus.any(guru.Guru.id == guru_.id))
+        data = session.exec(statement).all()
+        filter_form_initial["guru"] = {"value": guru_name, "label": guru_.name}
+    else:
+        data = session.query(clazz).all()
+    return data, filter_form_initial

@@ -8,8 +8,10 @@ from pydantic import BaseModel, Field
 
 from DecodeTheBot.core.consts import PAGE_SIZE
 from DecodeTheBot.core.database import get_session
+from DecodeTheBot.models import responses
 from DecodeTheBot.models.guru import Guru
-from DecodeTheBot.ui.dtg_ui import objects_ui_with, dtg_default_page
+from DecodeTheBot.ui.dtg_ui import dtg_default_page
+from fastuipr.from_dtg import objects_ui_with
 from fastuipr import builders
 
 router = APIRouter()
@@ -17,17 +19,14 @@ router = APIRouter()
 
 @router.get("/{guru_id}", response_model=FastUI, response_model_exclude_none=True)
 async def guru_view(guru_id: int, session: Session = Depends(get_session)) -> list[AnyComponent]:
-    guru = session.get(Guru, guru_id)
-    # guru = Guru.model_validate(guru)
-    # guru = Guru.model_validate(guru)
-    if not isinstance(guru, Guru):
-        return builders.empty_page()
+    guru_ = session.get(Guru, guru_id)
+    guru = responses.GuruOut.model_validate(guru_)
 
     return dtg_default_page(
         title=guru.name,
         components=[
             builders.back_link(),
-            guru.ui_detail(),
+            guru.fastui_col_basic(),
         ],
     )
 

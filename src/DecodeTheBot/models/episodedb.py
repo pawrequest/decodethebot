@@ -11,13 +11,11 @@ import scrapaw
 from scrapaw import DTGEpisode
 from suppawt import get_set
 from .links import GuruEpisodeLink, RedditThreadEpisodeLink
-from ..ui.dtg_ui import object_col_one
 from fastuipr import builders
 
 if TYPE_CHECKING:
     from DecodeTheBot.models.guru import Guru
     from .reddit_thread import RedditThread
-
 
 class DTGEpisodeDB(DTGEpisode, sqm.SQLModel, table=True):
     __tablename__ = "episode"

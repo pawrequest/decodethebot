@@ -5,10 +5,9 @@ E           sqlalchemy.exc.InvalidRequestError: When initializing mapper Mapper[
 
 """
 from typing import List, Optional, TYPE_CHECKING
-from sqlmodel import Field, Relationship, SQLModel, select
+from sqlmodel import Field, Relationship, SQLModel
 
 from .links import GuruEpisodeLink, RedditThreadGuruLink
-from ..ui.dtg_ui import objects_ui_with
 
 if TYPE_CHECKING:
     from .episodedb import DTGEpisodeDB
@@ -40,22 +39,4 @@ class Guru(GuruBase, table=True):
     def interest(self):
         return len(self.episodes) + len(self.reddit_threads)
 
-    def ui_detail(self):
-        return objects_ui_with([self])
 
-    # @property
-    # def get_hash(self):
-    #     return hash_simple_md5([self.name])
-    #
-
-
-def guru_filter_init(guru_name, session, clazz):
-    filter_form_initial = {}
-    if guru_name:
-        guru = session.exec(select(Guru).where(Guru.name == guru_name)).one()
-        statement = select(clazz).where(clazz.gurus.any(Guru.id == guru.id))
-        data = session.exec(statement).all()
-        filter_form_initial["guru"] = {"value": guru_name, "label": guru.name}
-    else:
-        data = session.query(clazz).all()
-    return data, filter_form_initial

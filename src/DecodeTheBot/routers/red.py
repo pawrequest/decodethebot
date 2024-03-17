@@ -3,12 +3,13 @@ from fastapi import APIRouter, Depends
 from sqlmodel import Session
 
 from fastuipr import builders
+from .eps import guru_filter_init
 from ..core.consts import PAGE_SIZE
 from ..core.database import get_session
-from ..models.guru import guru_filter_init
 from ..models.reddit_thread import RedditThread
 from ..routers.guroute import guru_filter
-from ..ui.dtg_ui import dtg_default_page, objects_ui_with
+from ..ui.dtg_ui import dtg_default_page
+from fastuipr.from_dtg import objects_ui_with
 
 router = APIRouter()
 
