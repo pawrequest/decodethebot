@@ -4,7 +4,7 @@ from typing import List
 from fastui import components as c, events
 
 import scrapaw
-from fastuipr import builders, styles
+from pawdantic.pawui import builders, styles
 from . import guru, reddit_thread
 
 

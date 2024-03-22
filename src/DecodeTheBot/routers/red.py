@@ -2,7 +2,7 @@ from fastui import AnyComponent, FastUI, components as c
 from fastapi import APIRouter, Depends
 from sqlmodel import Session
 
-from fastuipr import builders
+from pawdantic.pawui import builders
 from .eps import guru_filter_init
 from ..core.consts import PAGE_SIZE
 from ..core.database import get_session

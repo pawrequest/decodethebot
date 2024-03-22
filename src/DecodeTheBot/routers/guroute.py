@@ -12,7 +12,7 @@ from DecodeTheBot.models import responses
 from DecodeTheBot.models.guru import Guru
 from DecodeTheBot.ui.dtg_ui import dtg_default_page
 from fastuipr.from_dtg import objects_ui_with
-from fastuipr import builders
+from pawdantic.pawui import builders
 
 router = APIRouter()
 

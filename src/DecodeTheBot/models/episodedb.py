@@ -11,7 +11,7 @@ import scrapaw
 from scrapaw import DTGEpisode
 from suppawt import get_set
 from .links import GuruEpisodeLink, RedditThreadEpisodeLink
-from fastuipr import builders
+from pawdantic.pawui import builders
 
 if TYPE_CHECKING:
     from DecodeTheBot.models.guru import Guru

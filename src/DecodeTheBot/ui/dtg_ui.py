@@ -6,7 +6,7 @@ from sqlmodel import select
 
 from DecodeTheBot.models import guru
 from DecodeTheBot.ui import dtg_styles
-from fastuipr import builders, styles
+from pawdantic.pawui import builders, styles
 from DecodeTheBot.ui.dtg_styles import TITLE
 
 

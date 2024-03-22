@@ -7,7 +7,7 @@ from loguru import logger
 
 import DecodeTheBot.ui.dtg_ui
 from DecodeTheBot.models import responses
-from fastuipr import builders
+from pawdantic.pawui import builders
 from DecodeTheBot.core.consts import PAGE_SIZE
 from DecodeTheBot.core.database import get_session
 from DecodeTheBot.models.episodedb import DTGEpisodeDB
