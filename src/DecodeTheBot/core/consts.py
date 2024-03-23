@@ -27,4 +27,5 @@ INIT_EPS = os.environ.get("INIT_EPS", "False").lower() == "true"
 MAX_DUPES = int(os.environ.get("MAX_DUPES", 3))
 DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
 TRIM_DB = os.environ.get("TRIM_DB", "False").lower() == "true"
-EPISODE_SCRAPE_LIMIT = int(os.environ.get("EPISODE_SCRAPE_LIMIT", 3))
+EPISODE_LIMIT = os.environ.get("EPISODE_SCRAPE_LIMIT")
+EPISODE_SCRAPE_LIMIT = int(EPISODE_LIMIT) if EPISODE_LIMIT else None

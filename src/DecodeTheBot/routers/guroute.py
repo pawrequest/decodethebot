@@ -11,8 +11,7 @@ from DecodeTheBot.core.database import get_session
 from DecodeTheBot.models import responses
 from DecodeTheBot.models.guru import Guru
 from DecodeTheBot.ui.dtg_ui import dtg_default_page
-from fastuipr.from_dtg import objects_ui_with
-from pawdantic.pawui import builders
+from pawdantic.pawui import builders, from_dtg
 
 router = APIRouter()
 
@@ -48,7 +47,7 @@ def guru_list_view(page: int = 1, session: Session = Depends(get_session)) -> li
         return dtg_default_page(
             title="Gurus",
             components=[
-                objects_ui_with(data),
+                from_dtg.objects_ui_with(data),
                 c.Pagination(page=page, page_size=PAGE_SIZE, total=total),
             ],
         )

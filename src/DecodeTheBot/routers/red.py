@@ -2,14 +2,13 @@ from fastui import AnyComponent, FastUI, components as c
 from fastapi import APIRouter, Depends
 from sqlmodel import Session
 
-from pawdantic.pawui import builders
+from pawdantic.pawui import builders, from_dtg
 from .eps import guru_filter_init
 from ..core.consts import PAGE_SIZE
 from ..core.database import get_session
 from ..models.reddit_thread import RedditThread
 from ..routers.guroute import guru_filter
 from ..ui.dtg_ui import dtg_default_page
-from fastuipr.from_dtg import objects_ui_with
 
 router = APIRouter()
 
@@ -44,7 +43,7 @@ def thread_list_view(
         title="Threads",
         components=[
             guru_filter(filter_form_initial, model="reddit_threads"),
-            objects_ui_with(data),
+            from_dtg.objects_ui_with(data),
             c.Pagination(page=page, page_size=PAGE_SIZE, total=total),
         ],
     )

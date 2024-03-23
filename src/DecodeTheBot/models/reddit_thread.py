@@ -12,7 +12,7 @@ import sqlmodel as sqm
 from DecodeTheBot.models.links import RedditThreadEpisodeLink, RedditThreadGuruLink
 
 if TYPE_CHECKING:
-    from DecodeTheBot.models.episodedb import DTGEpisodeDB
+    from DecodeTheBot.models.episodedb import Episode
     from DecodeTheBot.models.guru import Guru
 
 
@@ -52,7 +52,7 @@ class RedditThread(RedditThreadBase, table=True, extend_existing=True):
     gurus: List["Guru"] = sqm.Relationship(
         back_populates="reddit_threads", link_model=RedditThreadGuruLink
     )
-    episodes: List["DTGEpisodeDB"] = sqm.Relationship(
+    episodes: List["Episode"] = sqm.Relationship(
         back_populates="reddit_threads", link_model=RedditThreadEpisodeLink
     )
 

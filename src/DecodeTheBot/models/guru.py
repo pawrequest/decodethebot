@@ -10,7 +10,7 @@ from sqlmodel import Field, Relationship, SQLModel
 from .links import GuruEpisodeLink, RedditThreadGuruLink
 
 if TYPE_CHECKING:
-    from .episodedb import DTGEpisodeDB
+    from .episodedb import Episode
     from .reddit_thread import RedditThread
 
 
@@ -25,7 +25,7 @@ class GuruBase(SQLModel):
 class Guru(GuruBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
 
-    episodes: List["DTGEpisodeDB"] = Relationship(back_populates="gurus", link_model=GuruEpisodeLink)
+    episodes: List["Episode"] = Relationship(back_populates="gurus", link_model=GuruEpisodeLink)
 
     reddit_threads: List["RedditThread"] = Relationship(
         back_populates="gurus", link_model=RedditThreadGuruLink

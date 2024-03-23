@@ -10,7 +10,7 @@ from DecodeTheBot.models import responses
 from pawdantic.pawui import builders
 from DecodeTheBot.core.consts import PAGE_SIZE
 from DecodeTheBot.core.database import get_session
-from DecodeTheBot.models.episodedb import DTGEpisodeDB
+from DecodeTheBot.models.episodedb import Episode
 from DecodeTheBot.models.guru import Guru
 from DecodeTheBot.routers.guroute import guru_filter
 from DecodeTheBot.ui.dtg_ui import dtg_default_page
@@ -21,8 +21,8 @@ router = APIRouter()
 # FastUI
 @router.get("/{ep_id}", response_model=FastUI, response_model_exclude_none=True)
 async def episode_view(ep_id: int, session: Session = Depends(get_session)) -> list[AnyComponent]:
-    episode_ = session.get(DTGEpisodeDB, ep_id)
-    episode = responses.DTGEpisodeOut.model_validate(episode_, from_attributes=True)
+    episode_ = session.get(Episode, ep_id)
+    episode = responses.EpisodeOut.model_validate(episode_, from_attributes=True)
     return dtg_default_page(
         components=[
             builders.back_link(),
@@ -37,8 +37,8 @@ def episode_list_view(
         page: int = 1, guru_name: str | None = None, session: Session = Depends(get_session)
 ) -> list[AnyComponent]:
     logger.info("episode_filter")
-    episodes_, filter_form_initial = guru_filter_init(guru_name, session, DTGEpisodeDB)
-    episodes = [responses.DTGEpisodeOut.model_validate(_, from_attributes=True) for _ in episodes_]
+    episodes_, filter_form_initial = guru_filter_init(guru_name, session, Episode)
+    episodes = [responses.EpisodeOut.model_validate(_, from_attributes=True) for _ in episodes_]
     episodes.sort(key=lambda x: x.date, reverse=True)
 
     total = len(episodes)

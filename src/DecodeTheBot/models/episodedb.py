@@ -8,7 +8,7 @@ import sqlmodel as sqm
 import sqlalchemy as sqa
 
 import scrapaw
-from scrapaw import DTGEpisode
+from scrapaw import EpisodeBase
 from suppawt import get_set
 from .links import GuruEpisodeLink, RedditThreadEpisodeLink
 from pawdantic.pawui import builders
@@ -17,8 +17,8 @@ if TYPE_CHECKING:
     from DecodeTheBot.models.guru import Guru
     from .reddit_thread import RedditThread
 
-class DTGEpisodeDB(DTGEpisode, sqm.SQLModel, table=True):
-    __tablename__ = "episode"
+
+class Episode(EpisodeBase, sqm.SQLModel, table=True):
     links: dict[str, str] = Field(default_factory=dict, sa_column=sqm.Column(sqa.JSON))
     notes: List[str] = Field(default_factory=list, sa_column=sqm.Column(sqa.JSON))
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -39,12 +39,3 @@ class DTGEpisodeDB(DTGEpisode, sqm.SQLModel, table=True):
     def rout_prefix(cls):
         return "/eps/"
 
-    def ui_detail(self):
-        writer = scrapaw.RPostWriter(self)
-        markup = writer.write_one()
-        return builders.wrap_divs(
-            components=[
-                *(object_col_one(_) for _ in self.gurus),
-                c.Markdown(text=markup),
-            ]
-        )

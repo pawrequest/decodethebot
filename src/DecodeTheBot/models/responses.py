@@ -27,7 +27,7 @@ from . import guru, reddit_thread
 #     )
 
 
-class DTGEpisodeOut(scrapaw.DTGEpisode):
+class EpisodeOut(scrapaw.EpisodeBase):
     id: int
     title: str
     url: str
@@ -66,7 +66,7 @@ class DTGEpisodeOut(scrapaw.DTGEpisode):
 
 class GuruOut(guru.GuruBase):
     id: int
-    episodes: List[scrapaw.DTGEpisode]
+    episodes: List[scrapaw.EpisodeBase]
     reddit_threads: List[reddit_thread.RedditThreadBase]
 
     def fastui_col_basic(self) -> c.Div:
@@ -83,7 +83,7 @@ class GuruOut(guru.GuruBase):
 class RedditThreadOut(reddit_thread.RedditThreadBase):
     id: int
     gurus: list[guru.GuruBase]
-    episodes: list[scrapaw.DTGEpisode]
+    episodes: list[scrapaw.EpisodeBase]
 
     def fastui_col_basic(self) -> c.Div:
         return builders.wrap_divs(
