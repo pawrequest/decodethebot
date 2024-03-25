@@ -59,6 +59,7 @@ def date_div(date, class_name) -> c.Div:
 
 
 def episode_detail(episode) -> c.Div:
+
     top_row = builders.wrap_divs(
         components=[
             date_div(episode.date, class_name=dtg_styles.DATE_COL),

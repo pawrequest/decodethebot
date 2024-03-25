@@ -1,15 +1,18 @@
 import asyncio
 import sys
 from contextlib import asynccontextmanager
+import shelve
 
+import sqlmodel
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastui import prebuilt_html
 from fastui.dev import dev_fastapi_app
 from fastapi.responses import HTMLResponse, PlainTextResponse
 
+from . import dtg_types
+from .core import database
 from .core.consts import logger
-from .core.database import create_db
 from .routers.eps import router as eps_router
 from .routers.guroute import router as guru_router
 from .routers.main import router as main_router
@@ -24,15 +27,34 @@ load_dotenv()
 async def lifespan(app: FastAPI):
     async with DTG.from_env() as dtg:  # noqa E1120 pycharm bug reported
         try:
-            create_db()
+            database.create_db()
             logger.info("tables created")
             main_task = asyncio.create_task(dtg.run())
             yield
 
         finally:
+            await shelf_db()
             await dtg.kill()
             main_task.cancel()
             await asyncio.gather(main_task)
+
+
+async def shelf_db():
+    with sqlmodel.Session(database.engine_()) as session:
+        with shelve.open(r"C:\Users\RYZEN\prdev\workbench\dtg_bot.shelf") as shelf:
+            for model_name, mapping in dtg_types.models_map.items():
+                result = session.exec(sqlmodel.select(mapping.db_model))
+                outputs = [mapping.output.model_validate(_, from_attributes=True) for _ in result.all()]
+                shelf[model_name] = outputs
+    logger.info("DB shelved")
+
+
+# async def shelf_db():
+#     session = database.get_session()
+#     with shelve.open("dtg_bot.shelf") as shelf:
+#         for model in dtg_types.DB_MODELS:
+#             shelf[model.__name__] = session.exec(sqlmodel.select(model)).all()
+#     logger.info("db shelved")
 
 
 frontend_reload = "--reload" in sys.argv

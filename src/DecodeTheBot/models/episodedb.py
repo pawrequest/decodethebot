@@ -3,15 +3,12 @@
 from typing import List, Optional, TYPE_CHECKING
 
 from sqlmodel import Field, Relationship
-from fastui import components as c
 import sqlmodel as sqm
 import sqlalchemy as sqa
 
-import scrapaw
 from scrapaw import EpisodeBase
 from suppawt import get_set
 from .links import GuruEpisodeLink, RedditThreadEpisodeLink
-from pawdantic.pawui import builders
 
 if TYPE_CHECKING:
     from DecodeTheBot.models.guru import Guru
@@ -38,4 +35,3 @@ class Episode(EpisodeBase, sqm.SQLModel, table=True):
     @classmethod
     def rout_prefix(cls):
         return "/eps/"
-

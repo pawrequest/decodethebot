@@ -2,7 +2,6 @@ import asyncio
 from asyncio import Queue
 from contextlib import asynccontextmanager
 from functools import lru_cache
-from typing import TypeVar, Union
 
 from pydantic import alias_generators
 import pydantic as _p
@@ -15,19 +14,13 @@ from loguru import logger
 import redditbot
 import suppawt.convert
 from pawdantic.pawsql import sqlpr
-from scrapaw import abs, dtg
+from scrapaw import dtg, pod_abs
 from suppawt import get_set
 from .core import consts, database
-from .models import episodedb, guru, links, reddit_thread
+from .dtg_types import ALL_MODELS, DB_MODEL_TYPE, DB_MODEL_VAR
+from .models import episodedb, guru, reddit_thread
 
 load_dotenv()
-
-DB_MODELS = (guru.Guru, episodedb.Episode, reddit_thread.RedditThread)
-LINK_MODELS = (links.GuruEpisodeLink, links.RedditThreadEpisodeLink, links.RedditThreadGuruLink)
-ALL_MODELS = (*DB_MODELS, *LINK_MODELS)
-ALL_MODELS_TYPE = Union[ALL_MODELS]
-DB_MODEL_TYPE = Union[DB_MODELS]
-DB_MODEL_VAR = TypeVar("DB_MODEL_VAR", bound=DB_MODEL_TYPE)
 
 
 class DTG:
@@ -104,7 +97,7 @@ class DTG:
         while True:
             try:
                 await self.get_episodes()
-            except abs.MaxDupeError:
+            except pod_abs.MaxDupeError:
                 logger.info('Maximum Duplicate Episodes Reached')
 
             logger.debug(f"Sleeping for {consts.SCRAPER_SLEEP} seconds")
@@ -121,7 +114,7 @@ class DTG:
             if sqlpr.obj_in_session(self.sqm_session, ep):
                 dupes += 1
                 if dupes > max_dupes:
-                    raise abs.MaxDupeError(f"Max dupes reached: {max_dupes}")
+                    raise pod_abs.MaxDupeError(f"Max dupes reached: {max_dupes}")
                 continue
             logger.info(f'Found Episode: {ep.title}')
             await self.episode_q.put(ep)
@@ -130,7 +123,7 @@ class DTG:
         while True:
             try:
                 await self.get_reddit_threads()
-            except abs.MaxDupeError:
+            except pod_abs.MaxDupeError:
                 logger.info('Maximum Duplicate Threads Reached')
 
             logger.debug(f"RedditBot Sleeping for {consts.REDDIT_SLEEP} seconds")
@@ -143,7 +136,7 @@ class DTG:
             if sqlpr.obj_in_session(self.sqm_session, thread):
                 dupes += 1
                 if dupes > max_dupes:
-                    raise abs.MaxDupeError(f"Max dupes reached: {max_dupes}")
+                    raise pod_abs.MaxDupeError(f"Max dupes reached: {max_dupes}")
                 continue
 
             logger.info(f'Found Reddit Thread: {thread.title}')
