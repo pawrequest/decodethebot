@@ -36,7 +36,7 @@ async def lifespan(app: FastAPI):
             await shelf_db()
             await dtg.kill()
             main_task.cancel()
-            await asyncio.gather(main_task)
+            await main_task
 
 
 async def shelf_db():
@@ -44,7 +44,8 @@ async def shelf_db():
         with shelve.open(r"C:\Users\RYZEN\prdev\workbench\dtg_bot.shelf") as shelf:
             for model_name, mapping in dtg_types.models_map.items():
                 result = session.exec(sqlmodel.select(mapping.db_model))
-                outputs = [mapping.output.model_validate(_, from_attributes=True) for _ in result.all()]
+                outputs = [mapping.output.model_validate(_, from_attributes=True) for _ in
+                           result.all()]
                 shelf[model_name] = outputs
     logger.info("DB shelved")
 

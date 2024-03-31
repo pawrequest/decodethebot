@@ -1,19 +1,25 @@
+import os
+import pathlib
+
 from sqlalchemy import create_engine, text
 from sqlmodel import SQLModel, Session
 
 from DecodeTheBot.core.consts import logger
 
 
-def engine_(config=None):
-    config = config or engine_config()
-    db_url = config["db_url"]
-    connect_args = config["connect_args"]
+def get_db_url():
+    DB_LOC = os.environ.get('GURU_DB')
+    logger.info(f"USING DB FILE: {DB_LOC}")
+    DB_PATH = pathlib.Path(DB_LOC)
+    DBLITE = f'sqlite:///{DB_PATH}' if DB_PATH.is_file() else 'sqlite:///guru.db'
+    return DBLITE
+
+
+def engine_():
+    db_url = get_db_url()
+    connect_args = {"check_same_thread": False}
 
     return create_engine(db_url, echo=False, connect_args=connect_args)
-
-
-def engine_config():
-    return {"db_url": "sqlite:///guru.db", "connect_args": {"check_same_thread": False}}
 
 
 def get_session(engine=None) -> Session:

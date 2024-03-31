@@ -15,7 +15,7 @@ import redditbot
 import suppawt.convert
 from pawdantic.pawsql import sqlpr
 from scrapaw import dtg, pod_abs
-from suppawt import get_set
+from suppawt import get_set, pawsync
 from .core import consts, database
 from .dtg_types import ALL_MODELS, DB_MODEL_TYPE, DB_MODEL_VAR
 from .models import episodedb, guru, reddit_thread
@@ -66,8 +66,6 @@ class DTG:
 
             self.tasks = [
                 asyncio.create_task(self.episode_q_manager()),
-                # asyncio.create_task(self.process_ep_queue()),
-                # asyncio.create_task(self.process_reddit_q()),
                 asyncio.create_task(self.reddit_q_manager()),
                 asyncio.create_task(
                     self.process_queue(
@@ -87,12 +85,14 @@ class DTG:
             ]
             logger.info("Tasks created")
 
+    @pawsync.quiet_cancel
     async def kill(self):
         logger.info("Killing")
         for task in self.tasks:
             task.cancel()
         await asyncio.gather(*self.tasks)
 
+    @pawsync.quiet_cancel
     async def episode_q_manager(self):
         while True:
             try:
@@ -119,6 +119,7 @@ class DTG:
             logger.info(f'Found Episode: {ep.title}')
             await self.episode_q.put(ep)
 
+    @pawsync.quiet_cancel
     async def reddit_q_manager(self):
         while True:
             try:
@@ -142,6 +143,7 @@ class DTG:
             logger.info(f'Found Reddit Thread: {thread.title}')
             await self.reddit_q.put(thread)
 
+    @pawsync.quiet_cancel
     async def process_queue(
             self,
             queue,

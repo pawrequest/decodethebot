@@ -5,7 +5,10 @@ E           sqlalchemy.exc.InvalidRequestError: When initializing mapper Mapper[
 
 """
 from typing import List, Optional, TYPE_CHECKING
+
+import sqlmodel
 from sqlmodel import Field, Relationship, SQLModel
+import sqlalchemy as sa
 
 from .links import GuruEpisodeLink, RedditThreadGuruLink
 
@@ -16,6 +19,7 @@ if TYPE_CHECKING:
 
 class GuruBase(SQLModel):
     name: str = Field(index=True, unique=True)
+    notes: list[str] | None = Field(default_factory=list)
 
     @property
     def slug(self):
@@ -24,6 +28,7 @@ class GuruBase(SQLModel):
 
 class Guru(GuruBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
+    notes: list[str] | None = Field(default_factory=list, sa_column=sqlmodel.Column(sa.JSON))
 
     episodes: List["Episode"] = Relationship(back_populates="gurus", link_model=GuruEpisodeLink)
 
@@ -38,5 +43,3 @@ class Guru(GuruBase, table=True):
     @property
     def interest(self):
         return len(self.episodes) + len(self.reddit_threads)
-
-
