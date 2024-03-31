@@ -1,18 +1,17 @@
 import os
 import pathlib
 
+from loguru import logger
 from sqlalchemy import create_engine, text
 from sqlmodel import SQLModel, Session
 
-from DecodeTheBot.core.consts import logger
+DB_LOC = os.environ.get('GURU_DB')
+logger.info(f"USING DB FILE: {DB_LOC}")
+DB_PATH = pathlib.Path(DB_LOC)
 
 
 def get_db_url():
-    DB_LOC = os.environ.get('GURU_DB')
-    logger.info(f"USING DB FILE: {DB_LOC}")
-    DB_PATH = pathlib.Path(DB_LOC)
-    DBLITE = f'sqlite:///{DB_PATH}' if DB_PATH.is_file() else 'sqlite:///guru.db'
-    return DBLITE
+    return f'sqlite:///{DB_PATH}'
 
 
 def engine_():

@@ -5,7 +5,7 @@ from fastui import components as c, events
 
 import scrapaw
 from pawdantic.pawui import builders, styles
-from . import guru, reddit_thread
+from . import guru_m, reddit_m
 
 
 # from scrapaw import DTGEpisode
@@ -36,8 +36,8 @@ class EpisodeOut(scrapaw.EpisodeBase):
     links: dict[str, str]
     number: str
 
-    gurus: List[guru.GuruBase]
-    reddit_threads: List[reddit_thread.RedditThreadBase]
+    gurus: List[guru_m.GuruBase]
+    reddit_threads: List[reddit_m.RedditThreadBase]
 
     @property
     def slug(self):
@@ -64,10 +64,10 @@ class EpisodeOut(scrapaw.EpisodeBase):
         )
 
 
-class GuruOut(guru.GuruBase):
+class GuruOut(guru_m.GuruBase):
     id: int
     episodes: List[scrapaw.EpisodeBase]
-    reddit_threads: List[reddit_thread.RedditThreadBase]
+    reddit_threads: List[reddit_m.RedditThreadBase]
 
     def fastui_col_basic(self) -> c.Div:
         return builders.wrap_divs(
@@ -80,9 +80,9 @@ class GuruOut(guru.GuruBase):
         )
 
 
-class RedditThreadOut(reddit_thread.RedditThreadBase):
+class RedditThreadOut(reddit_m.RedditThreadBase):
     id: int
-    gurus: list[guru.GuruBase]
+    gurus: list[guru_m.GuruBase]
     episodes: list[scrapaw.EpisodeBase]
 
     def fastui_col_basic(self) -> c.Div:

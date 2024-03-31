@@ -1,4 +1,5 @@
 import asyncio
+import os
 import sys
 from contextlib import asynccontextmanager
 import shelve
@@ -20,7 +21,8 @@ from .routers.red import router as red_router
 from .routers.forms import router as forms_router
 from .dtg_bot import DTG
 
-load_dotenv()
+envloc = os.environ.get('GURU_ENV')
+load_dotenv(envloc)
 
 
 @asynccontextmanager

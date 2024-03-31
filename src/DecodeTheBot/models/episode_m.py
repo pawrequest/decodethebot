@@ -11,8 +11,8 @@ from suppawt import get_set
 from .links import GuruEpisodeLink, RedditThreadEpisodeLink
 
 if TYPE_CHECKING:
-    from DecodeTheBot.models.guru import Guru
-    from .reddit_thread import RedditThread
+    from DecodeTheBot.models.guru_m import Guru
+    from .reddit_m import RedditThread
 
 
 class Episode(EpisodeBase, sqm.SQLModel, table=True):

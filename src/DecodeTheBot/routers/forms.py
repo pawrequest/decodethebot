@@ -11,7 +11,7 @@ from pydantic import BaseModel, EmailStr, Field, SecretStr
 from sqlmodel import Session
 
 from DecodeTheBot.core.database import get_session
-from DecodeTheBot.models.guru import Guru
+from DecodeTheBot.models.guru_m import Guru
 
 router = APIRouter()
 

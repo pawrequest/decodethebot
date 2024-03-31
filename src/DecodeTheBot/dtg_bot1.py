@@ -27,7 +27,7 @@
 # from .core.database import engine_, trim_db
 # from .models.episode import EpisodeDB
 # from .models.guru import Guru
-# from .models.reddit_thread import RedditThread
+# from .models.reddit_m import RedditThread
 # from .models.links import GuruEpisodeLink, RedditThreadEpisodeLink, RedditThreadGuruLink
 #
 # load_dotenv()

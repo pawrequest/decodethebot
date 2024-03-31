@@ -6,7 +6,7 @@ from pawdantic.pawui import builders, from_dtg
 from .eps import guru_filter_init
 from ..core.consts import PAGE_SIZE
 from ..core.database import get_session
-from ..models.reddit_thread import RedditThread
+from ..models.reddit_m import RedditThread
 from ..routers.guroute import guru_filter
 from ..ui.dtg_ui import dtg_default_page
 

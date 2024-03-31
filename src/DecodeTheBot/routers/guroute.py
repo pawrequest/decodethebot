@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from DecodeTheBot.core.consts import PAGE_SIZE
 from DecodeTheBot.core.database import get_session
 from DecodeTheBot.models import responses
-from DecodeTheBot.models.guru import Guru
+from DecodeTheBot.models.guru_m import Guru
 from DecodeTheBot.ui.dtg_ui import dtg_default_page
 from pawdantic.pawui import builders, from_dtg
 

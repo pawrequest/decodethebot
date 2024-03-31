@@ -13,8 +13,8 @@ import sqlalchemy as sa
 from .links import GuruEpisodeLink, RedditThreadGuruLink
 
 if TYPE_CHECKING:
-    from .episodedb import Episode
-    from .reddit_thread import RedditThread
+    from .episode_m import Episode
+    from .reddit_m import RedditThread
 
 
 class GuruBase(SQLModel):

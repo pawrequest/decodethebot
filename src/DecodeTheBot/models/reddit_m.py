@@ -12,8 +12,8 @@ import sqlmodel as sqm
 from DecodeTheBot.models.links import RedditThreadEpisodeLink, RedditThreadGuruLink
 
 if TYPE_CHECKING:
-    from DecodeTheBot.models.episodedb import Episode
-    from DecodeTheBot.models.guru import Guru
+    from DecodeTheBot.models.episode_m import Episode
+    from DecodeTheBot.models.guru_m import Guru
 
 
 def submission_to_dict(submission: Submission):

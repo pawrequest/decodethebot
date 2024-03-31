@@ -10,8 +10,8 @@ from DecodeTheBot.models import responses
 from pawdantic.pawui import builders
 from DecodeTheBot.core.consts import PAGE_SIZE
 from DecodeTheBot.core.database import get_session
-from DecodeTheBot.models.episodedb import Episode
-from DecodeTheBot.models.guru import Guru
+from DecodeTheBot.models.episode_m import Episode
+from DecodeTheBot.models.guru_m import Guru
 from DecodeTheBot.routers.guroute import guru_filter
 from DecodeTheBot.ui.dtg_ui import dtg_default_page
 

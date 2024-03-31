@@ -18,7 +18,7 @@ from scrapaw import dtg, pod_abs
 from suppawt import get_set, pawsync
 from .core import consts, database
 from .dtg_types import ALL_MODELS, DB_MODEL_TYPE, DB_MODEL_VAR
-from .models import episodedb, guru, reddit_thread
+from .models import episode_m, guru_m, reddit_m
 
 load_dotenv()
 
@@ -70,16 +70,16 @@ class DTG:
                 asyncio.create_task(
                     self.process_queue(
                         self.reddit_q,
-                        reddit_thread.RedditThread,
-                        relation_classes=[episodedb.Episode, guru.Guru]
+                        reddit_m.RedditThread,
+                        relation_classes=[episode_m.Episode, guru_m.Guru]
                     )
                 ),
 
                 asyncio.create_task(
                     self.process_queue(
                         self.episode_q,
-                        episodedb.Episode,
-                        relation_classes=[reddit_thread.RedditThread, guru.Guru]
+                        episode_m.Episode,
+                        relation_classes=[reddit_m.RedditThread, guru_m.Guru]
                     )
                 ),
             ]
@@ -110,7 +110,7 @@ class DTG:
                 session_h=self.http_session,
                 limit=consts.EPISODE_SCRAPE_LIMIT,
         ):
-            ep = episodedb.Episode.model_validate(ep_)
+            ep = episode_m.Episode.model_validate(ep_)
             if sqlpr.obj_in_session(self.sqm_session, ep):
                 dupes += 1
                 if dupes > max_dupes:
@@ -133,7 +133,7 @@ class DTG:
     async def get_reddit_threads(self, max_dupes: int = consts.MAX_DUPES):
         dupes = 0
         async for sub in self.subreddit.stream.submissions(skip_existing=False):
-            thread = reddit_thread.RedditThread.from_submission(sub)
+            thread = reddit_m.RedditThread.from_submission(sub)
             if sqlpr.obj_in_session(self.sqm_session, thread):
                 dupes += 1
                 if dupes > max_dupes:
@@ -171,12 +171,12 @@ class DTG:
     # async def process_ep_queue(self):
     #     while True:
     #         episode_ = await self.episode_q.get()
-    #         episode = episodedb.DTGEpisodeDB.model_validate(episode_)
+    #         episode = episode_m.DTGEpisodeDB.model_validate(episode_)
     #
-    #         gurus = db_obj_matches(self.sqm_session, episode, guru.Guru)
-    #         threads = db_obj_matches(self.sqm_session, episode, reddit_thread.RedditThread)
+    #         gurus = db_obj_matches(self.sqm_session, episode, guru_m.Guru)
+    #         threads = db_obj_matches(self.sqm_session, episode, reddit_m.RedditThread)
     #         episode.gurus.extend(gurus)
-    #         episode.reddit_threads.extend(threads)
+    #         episode.reddit_ms.extend(threads)
     #
     #         self.sqm_session.add(episode)
     #
@@ -189,10 +189,10 @@ class DTG:
     # async def process_reddit_q(self):
     #     while True:
     #         thread_ = await self.reddit_q.get()
-    #         thread = reddit_thread.RedditThread.model_validate(thread_)
+    #         thread = reddit_m.RedditThread.model_validate(thread_)
     #
-    #         gurus = db_obj_matches(self.sqm_session, thread, guru.Guru)
-    #         episodes = db_obj_matches(self.sqm_session, thread, episodedb.DTGEpisodeDB)
+    #         gurus = db_obj_matches(self.sqm_session, thread, guru_m.Guru)
+    #         episodes = db_obj_matches(self.sqm_session, thread, episode_m.DTGEpisodeDB)
     #         thread.gurus.extend(gurus)
     #         thread.episodes.extend(episodes)
     #
@@ -229,10 +229,10 @@ def one_in_other(obj: DB_MODEL_VAR, obj_var: str, compare_val: str):
 def gurus_from_file(session, infile):
     with open(infile, "r") as f:
         guru_names = f.read().split(",")
-    session_gurus = session.exec(sqm.select(guru.Guru.name)).all()
+    session_gurus = session.exec(sqm.select(guru_m.Guru.name)).all()
     if new_gurus := set(guru_names) - set(session_gurus):
         logger.info(f"Adding {len(new_gurus)} new gurus")
-        gurus = [guru.Guru(name=_) for _ in new_gurus]
+        gurus = [guru_m.Guru(name=_) for _ in new_gurus]
         session.add_all(gurus)
         session.commit()
 
@@ -248,7 +248,7 @@ def model_map_():
 #     logger.info("Initialising episodes")
 #     eps = []
 #     async for ep in episode_stream:
-#         ep = episodedb.DTGEpisodeDB.model_validate(ep)
+#         ep = episode_m.DTGEpisodeDB.model_validate(ep)
 #         eps.append(ep)
 #         init_i += 1
 #         if init_i >= init_n:
@@ -261,9 +261,9 @@ def model_map_():
 #             continue
 #         logger.info(f"Adding {ep.title}")
 #         session.add(ep)
-#         thread_matches = db_obj_matches(session, ep, reddit_thread.RedditThread)
-#         guru_matches = db_obj_matches(session, ep, guru.Guru)
-#         sqlpr.assign_rel(ep, reddit_thread.RedditThread, thread_matches)
-#         sqlpr.assign_rel(ep, guru.Guru, guru_matches)
+#         thread_matches = db_obj_matches(session, ep, reddit_m.RedditThread)
+#         guru_matches = db_obj_matches(session, ep, guru_m.Guru)
+#         sqlpr.assign_rel(ep, reddit_m.RedditThread, thread_matches)
+#         sqlpr.assign_rel(ep, guru_m.Guru, guru_matches)
 #     if session.new:
 #         session.commit()

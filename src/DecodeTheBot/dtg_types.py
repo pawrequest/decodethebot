@@ -4,9 +4,9 @@ from typing import Sequence, TypeVar, Union
 from sqlmodel import SQLModel
 import pydantic as _p
 
-from DecodeTheBot.models import episodedb, guru, links, reddit_thread, responses
+from DecodeTheBot.models import episode_m, guru_m, links, reddit_m, responses
 
-DB_MODELS = (guru.Guru, episodedb.Episode, reddit_thread.RedditThread)
+DB_MODELS = (guru_m.Guru, episode_m.Episode, reddit_m.RedditThread)
 LINK_MODELS = (links.GuruEpisodeLink, links.RedditThreadEpisodeLink, links.RedditThreadGuruLink)
 ALL_MODELS = (*DB_MODELS, *LINK_MODELS)
 ALL_MODELS_TYPE = Union[ALL_MODELS]
@@ -23,22 +23,22 @@ class ModelMap:
 
 
 GuruMap = ModelMap(
-    base=guru.GuruBase,
-    db_model=guru.Guru,
+    base=guru_m.GuruBase,
+    db_model=guru_m.Guru,
     model_links=[links.GuruEpisodeLink, links.RedditThreadGuruLink],
     output=responses.GuruOut
 )
 
 EpisodeMap = ModelMap(
-    base=episodedb.EpisodeBase,
-    db_model=episodedb.Episode,
+    base=episode_m.EpisodeBase,
+    db_model=episode_m.Episode,
     model_links=[links.GuruEpisodeLink, links.RedditThreadEpisodeLink],
     output=responses.EpisodeOut
 )
 
 RedditThreadMap = ModelMap(
-    base=reddit_thread.RedditThreadBase,
-    db_model=reddit_thread.RedditThread,
+    base=reddit_m.RedditThreadBase,
+    db_model=reddit_m.RedditThread,
     model_links=[links.RedditThreadEpisodeLink, links.RedditThreadGuruLink],
     output=responses.RedditThreadOut
 )

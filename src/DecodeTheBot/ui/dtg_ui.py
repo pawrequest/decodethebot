@@ -4,7 +4,7 @@ import fastui
 from fastui import components as c, events
 from sqlmodel import select
 
-from DecodeTheBot.models import guru
+from DecodeTheBot.models import guru_m
 from DecodeTheBot.ui import dtg_styles
 from pawdantic.pawui import builders, styles
 from DecodeTheBot.ui.dtg_styles import TITLE
@@ -196,8 +196,8 @@ def title_sluglink_div(obj, class_name) -> c.Div:
 def guru_filter_init(guru_name, session, clazz):
     filter_form_initial = {}
     if guru_name:
-        guru_ = session.exec(select(guru.Guru).where(guru.Guru.name == guru_name)).one()
-        statement = select(clazz).where(clazz.gurus.any(guru.Guru.id == guru_.id))
+        guru_ = session.exec(select(guru_m.Guru).where(guru_m.Guru.name == guru_name)).one()
+        statement = select(clazz).where(clazz.gurus.any(guru_m.Guru.id == guru_.id))
         data = session.exec(statement).all()
         filter_form_initial["guru"] = {"value": guru_name, "label": guru_.name}
     else:
