@@ -5,13 +5,12 @@ from loguru import logger
 from sqlalchemy import create_engine, text
 from sqlmodel import SQLModel, Session
 
-DB_LOC = os.environ.get('GURU_DB')
-logger.info(f"USING DB FILE: {DB_LOC}")
-DB_PATH = pathlib.Path(DB_LOC)
-
 
 def get_db_url():
-    return f'sqlite:///{DB_PATH}'
+    db_loc = os.environ.get('GURU_DB')
+    logger.info(f"USING DB FILE: {db_loc}")
+    db_path = pathlib.Path(db_loc)
+    return f'sqlite:///{db_path}'
 
 
 def engine_():
@@ -41,12 +40,12 @@ def trim_db(session):
     stmts = [
         text(_)
         for _ in [
-            f"delete from episode where id >={ep_trim}",
-            f"delete from guruepisodelink where episode_id >={ep_trim}",
-            f"delete from redditthreadepisodelink where episode_id >={ep_trim}",
-            f"delete from redditthread where id >={red_trim}",
-            f"delete from redditthreadepisodelink where reddit_thread_id >={red_trim}",
-            f"delete from redditthreadgurulink where reddit_thread_id >={red_trim}",
+            f"delete from episode where id <={ep_trim}",
+            f"delete from guruepisodelink where episode_id <={ep_trim}",
+            f"delete from redditthreadepisodelink where episode_id <={ep_trim}",
+            f"delete from redditthread where id <={red_trim}",
+            f"delete from redditthreadepisodelink where reddit_thread_id <={red_trim}",
+            f"delete from redditthreadgurulink where reddit_thread_id <={red_trim}",
         ]
     ]
     try:

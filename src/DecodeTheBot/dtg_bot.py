@@ -71,6 +71,7 @@ class DTG:
                     self.process_queue(
                         self.reddit_q,
                         reddit_m.RedditThread,
+                        log_category='reddit',
                         relation_classes=[episode_m.Episode, guru_m.Guru]
                     )
                 ),
@@ -79,6 +80,7 @@ class DTG:
                     self.process_queue(
                         self.episode_q,
                         episode_m.Episode,
+                        log_category='episode',
                         relation_classes=[reddit_m.RedditThread, guru_m.Guru]
                     )
                 ),
@@ -98,9 +100,12 @@ class DTG:
             try:
                 await self.get_episodes()
             except pod_abs.MaxDupeError:
-                logger.info('Maximum Duplicate Episodes Reached')
+                logger.debug('Maximum Duplicate Episodes Reached', category='episode')
 
-            logger.debug(f"Sleeping for {consts.SCRAPER_SLEEP} seconds")
+            logger.debug(
+                f"Episode manager sleeping for {consts.SCRAPER_SLEEP} seconds",
+                category='episode'
+            )
             await asyncio.sleep(consts.SCRAPER_SLEEP)
 
     async def get_episodes(self, max_dupes: int = consts.MAX_DUPES):
@@ -112,11 +117,12 @@ class DTG:
         ):
             ep = episode_m.Episode.model_validate(ep_)
             if sqlpr.obj_in_session(self.sqm_session, ep):
+                logger.debug(f"Duplicate Episode: {ep.title}", category='episode')
                 dupes += 1
-                if dupes > max_dupes:
+                if max_dupes and dupes > max_dupes:
                     raise pod_abs.MaxDupeError(f"Max dupes reached: {max_dupes}")
                 continue
-            logger.info(f'Found Episode: {ep.title}')
+            logger.debug(f'Found Episode: {ep.title}', category='episode')
             await self.episode_q.put(ep)
 
     @pawsync.quiet_cancel
@@ -125,9 +131,12 @@ class DTG:
             try:
                 await self.get_reddit_threads()
             except pod_abs.MaxDupeError:
-                logger.info('Maximum Duplicate Threads Reached')
+                logger.debug(
+                    'Maximum Duplicate Threads Reached',
+                    category='reddit',
+                )
 
-            logger.debug(f"RedditBot Sleeping for {consts.REDDIT_SLEEP} seconds")
+            logger.debug(f"RedditBot Sleeping for {consts.REDDIT_SLEEP} seconds", category='reddit')
             await asyncio.sleep(consts.REDDIT_SLEEP)
 
     async def get_reddit_threads(self, max_dupes: int = consts.MAX_DUPES):
@@ -136,11 +145,11 @@ class DTG:
             thread = reddit_m.RedditThread.from_submission(sub)
             if sqlpr.obj_in_session(self.sqm_session, thread):
                 dupes += 1
-                if dupes > max_dupes:
+                if max_dupes and dupes > max_dupes:
                     raise pod_abs.MaxDupeError(f"Max dupes reached: {max_dupes}")
                 continue
 
-            logger.info(f'Found Reddit Thread: {thread.title}')
+            logger.info(f'Found Reddit Thread: {thread.title}', category='reddit')
             await self.reddit_q.put(thread)
 
     @pawsync.quiet_cancel
@@ -148,20 +157,23 @@ class DTG:
             self,
             queue,
             model_class: type(_p.BaseModel),
-            relation_classes: list[type(_p.BaseModel)]
+            relation_classes: list[type(_p.BaseModel)],
+            log_category: str = 'General',
     ):
         while True:
             item_ = await queue.get()
             item = model_class.model_validate(item_)
+            item_str = f'{item.__class__.__name__} - {get_set.title_or_name_val(item)}'
+            logger.debug(f"Processing {item_str}", category=log_category)
 
             self.sqm_session.add(item)
             for relation_class in relation_classes:
                 await self.assign_rel(item, relation_class)
 
-            logger.info(f"Processing {item.__class__.__name__} - {get_set.title_or_name_val(item)}")
             self.sqm_session.commit()
             self.sqm_session.refresh(item)
             queue.task_done()
+            logger.info(f"Processed {item_str}", category=log_category)
 
     async def assign_rel(self, item, relation_class):
         related_items = db_obj_matches(self.sqm_session, item, relation_class)

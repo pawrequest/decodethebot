@@ -9,7 +9,6 @@ readme = "README.md"
 requires-python = ">= 3.12"
 dependencies = [
     'asyncpraw',
-
     'sqlmodel',
     "uvicorn[standard]",
     'fastapi',
@@ -19,16 +18,12 @@ dependencies = [
     "loguru",
     "fastui",
     "scrapaw",
-    "pawlogger[loguru]",
     "suppawt",
-#    "fastuipr",
 ]
 [project.optional-dependencies]
 git = [
     "scraper @ git+https://github.com/pawrequest/scraper",
-    "pawlogger[loguru] @ git+https://github.com/pawrequest/pawlogger",
     "suppawt @ git+https://github.com/pawrequest/suppawt",
-#    "fastuipr @ git+https://github.com/pawrequest/fastuipr",
 ]
 
 [build-system]
