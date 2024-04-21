@@ -29,7 +29,8 @@ DTG_SHELF = r'C:\Users\RYZEN\prdev\workbench\dtg_bot.shelf'
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    async with DTG.from_env() as dtg:  # E1120 pycharm bug reported
+    # noinspection PyArgumentList
+    async with DTG.from_env() as dtg:
         try:
             database.create_db()
             with sqlmodel.Session(database.engine_()) as session:
