@@ -3,19 +3,19 @@ from asyncio import Queue
 from contextlib import asynccontextmanager
 from functools import lru_cache
 
-from pydantic import alias_generators
 import pydantic as _p
+import sqlmodel as sqm
 from aiohttp import ClientSession
 from asyncpraw.models import Subreddit
 from dotenv import load_dotenv
-import sqlmodel as sqm
 from loguru import logger
+from pydantic import alias_generators
 
 import redditbot
 import suppawt.convert
 from pawdantic.pawsql import sqlpr
 from scrapaw import dtg, pod_abs
-from suppawt import get_set, pawsync
+from suppawt import get_values, pawsync
 from .core import consts, database
 from .dtg_types import ALL_MODELS, DB_MODEL_TYPE, DB_MODEL_VAR
 from .models import episode_m, guru_m, reddit_m
@@ -44,12 +44,11 @@ class DTG:
     @asynccontextmanager
     async def from_env(
             cls,
-    ) -> "DTG":
+    ) -> 'DTG':
         with sqm.Session(database.engine_()) as sqmsesh:
             async with ClientSession() as http_session:
-                async with redditbot.subreddit_cm(
-                        sub_name=consts.SUBREDDIT_NAME  # noqa E1120 pycharm bug reported
-                ) as subreddit:  # noqa E1120 pycharm bug reported
+                # noinspection PyArgumentList pycharm_bug
+                async with redditbot.subreddit_cm(sub_name=consts.SUBREDDIT_NAME) as subreddit:
                     try:
                         yield cls(
                             sqm_session=sqmsesh,
@@ -60,7 +59,7 @@ class DTG:
                         await http_session.close()
 
     async def run(self):
-        logger.info("Initialised")
+        logger.info('Initialised')
         with self.sqm_session as session:
             gurus_from_file(session, consts.GURU_NAMES_FILE)
 
@@ -85,11 +84,11 @@ class DTG:
                     )
                 ),
             ]
-            logger.info("Tasks created")
+            logger.info('Tasks created')
 
     @pawsync.quiet_cancel
     async def kill(self):
-        logger.info("Killing")
+        logger.info('Killing')
         for task in self.tasks:
             task.cancel()
         await asyncio.gather(*self.tasks)
@@ -103,7 +102,7 @@ class DTG:
                 logger.debug('Maximum Duplicate Episodes Reached', category='episode')
 
             logger.debug(
-                f"Episode manager sleeping for {consts.SCRAPER_SLEEP} seconds",
+                f'Episode manager sleeping for {consts.SCRAPER_SLEEP} seconds',
                 category='episode'
             )
             await asyncio.sleep(consts.SCRAPER_SLEEP)
@@ -117,10 +116,10 @@ class DTG:
         ):
             ep = episode_m.Episode.model_validate(ep_)
             if sqlpr.obj_in_session(self.sqm_session, ep):
-                logger.debug(f"Duplicate Episode: {ep.title}", category='episode')
+                logger.debug(f'Duplicate Episode: {ep.title}', category='episode')
                 dupes += 1
                 if max_dupes and dupes > max_dupes:
-                    raise pod_abs.MaxDupeError(f"Max dupes reached: {max_dupes}")
+                    raise pod_abs.MaxDupeError(f'Max dupes reached: {max_dupes}')
                 continue
             logger.debug(f'Found Episode: {ep.title}', category='episode')
             await self.episode_q.put(ep)
@@ -136,7 +135,7 @@ class DTG:
                     category='reddit',
                 )
 
-            logger.debug(f"RedditBot Sleeping for {consts.REDDIT_SLEEP} seconds", category='reddit')
+            logger.debug(f'RedditBot Sleeping for {consts.REDDIT_SLEEP} seconds', category='reddit')
             await asyncio.sleep(consts.REDDIT_SLEEP)
 
     async def get_reddit_threads(self, max_dupes: int = consts.MAX_DUPES):
@@ -146,7 +145,7 @@ class DTG:
             if sqlpr.obj_in_session(self.sqm_session, thread):
                 dupes += 1
                 if max_dupes and dupes > max_dupes:
-                    raise pod_abs.MaxDupeError(f"Max dupes reached: {max_dupes}")
+                    raise pod_abs.MaxDupeError(f'Max dupes reached: {max_dupes}')
                 continue
 
             logger.info(f'Found Reddit Thread: {thread.title}', category='reddit')
@@ -163,8 +162,8 @@ class DTG:
         while True:
             item_ = await queue.get()
             item = model_class.model_validate(item_)
-            item_str = f'{item.__class__.__name__} - {get_set.title_or_name_val(item)}'
-            logger.debug(f"Processing {item_str}", category=log_category)
+            item_str = f'{item.__class__.__name__} - {get_values.title_or_name_val(item)}'
+            logger.debug(f'Processing {item_str}', category=log_category)
 
             self.sqm_session.add(item)
             for relation_class in relation_classes:
@@ -173,7 +172,7 @@ class DTG:
             self.sqm_session.commit()
             self.sqm_session.refresh(item)
             queue.task_done()
-            logger.info(f"Processed {item_str}", category=log_category)
+            logger.info(f'Processed {item_str}', category=log_category)
 
     async def assign_rel(self, item, relation_class):
         related_items = db_obj_matches(self.sqm_session, item, relation_class)
@@ -193,7 +192,7 @@ class DTG:
     #         self.sqm_session.add(episode)
     #
     #         logger.info(
-    #             f"Processing {episode.__class__.__name__} - {get_set.title_or_name_val(episode)}"
+    #             f"Processing {episode.__class__.__name__} - {get_values.title_or_name_val(episode)}"
     #         )
     #         self.sqm_session.commit()
     #         self.episode_q.task_done()
@@ -211,7 +210,7 @@ class DTG:
     #         self.sqm_session.add(thread)
     #
     #         logger.info(
-    #             f"Processing {thread.__class__.__name__} - {get_set.title_or_name_val(thread)}"
+    #             f"Processing {thread.__class__.__name__} - {get_values.title_or_name_val(thread)}"
     #         )
     #         self.sqm_session.commit()
     #         self.reddit_q.task_done()
@@ -223,8 +222,8 @@ def db_obj_matches(
     if isinstance(obj, model):
         return []
     db_objs = session.exec(sqm.select(model)).all()
-    identifier = get_set.title_or_name_val(obj)
-    obj_var = get_set.title_or_name_var(model)
+    identifier = get_values.title_or_name_val(obj)
+    obj_var = get_values.title_or_name_var(model)
 
     if matched_tag_models := [_ for _ in db_objs if one_in_other(_, obj_var, identifier)]:
         logger.debug(
@@ -239,17 +238,17 @@ def one_in_other(obj: DB_MODEL_VAR, obj_var: str, compare_val: str):
 
 
 def gurus_from_file(session, infile):
-    with open(infile, "r") as f:
-        guru_names = f.read().split(",")
+    with open(infile) as f:
+        guru_names = f.read().split(',')
     session_gurus = session.exec(sqm.select(guru_m.Guru.name)).all()
     if new_gurus := set(guru_names) - set(session_gurus):
-        logger.info(f"Adding {len(new_gurus)} new gurus")
+        logger.info(f'Adding {len(new_gurus)} new gurus')
         gurus = [guru_m.Guru(name=_) for _ in new_gurus]
         session.add_all(gurus)
         session.commit()
 
 
-@lru_cache()
+@lru_cache
 def model_map_():
     return {suppawt.convert.snake_name(_): _ for _ in ALL_MODELS}
 

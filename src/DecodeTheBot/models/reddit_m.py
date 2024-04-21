@@ -4,7 +4,7 @@ from typing import Dict, List, Optional, TYPE_CHECKING
 
 from asyncpraw.models import Submission
 from fastui import components as c
-from suppawt import get_set
+from suppawt import get_values
 import pydantic as _p
 import sqlalchemy as sqa
 import sqlmodel as sqm
@@ -58,7 +58,7 @@ class RedditThread(RedditThreadBase, table=True, extend_existing=True):
 
     @property
     def get_hash(self):
-        return get_set.hash_simple_md5([self.reddit_id])
+        return get_values.hash_simple_md5([self.reddit_id])
 
     @property
     def slug(self):
