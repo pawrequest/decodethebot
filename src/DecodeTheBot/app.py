@@ -1,11 +1,9 @@
 import asyncio
-import os
 import sys
 from contextlib import asynccontextmanager
 import shelve
 
 import sqlmodel
-from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastui import prebuilt_html
 from fastui.dev import dev_fastapi_app
@@ -21,7 +19,7 @@ from .routers.red import router as red_router
 from .routers.forms import router as forms_router
 from .dtg_bot import DTG
 
-DTG_SHELF = r"C:\Users\RYZEN\prdev\workbench\dtg_bot.shelf"
+DTG_SHELF = r'C:\Users\RYZEN\prdev\workbench\dtg_bot.shelf'
 
 
 #
@@ -31,12 +29,12 @@ DTG_SHELF = r"C:\Users\RYZEN\prdev\workbench\dtg_bot.shelf"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    async with DTG.from_env() as dtg:  # noqa E1120 pycharm bug reported
+    async with DTG.from_env() as dtg:  # E1120 pycharm bug reported
         try:
             database.create_db()
             with sqlmodel.Session(database.engine_()) as session:
                 database.trim_db(session)
-            logger.info("tables created")
+            logger.info('tables created')
             main_task = asyncio.create_task(dtg.run())
             yield
 
@@ -55,7 +53,7 @@ async def shelf_db():
                 outputs = [mapping.output.model_validate(_, from_attributes=True) for _ in
                            result.all()]
                 shelf[model_name] = outputs
-    logger.info(f"DB shelved to {DTG_SHELF}")
+    logger.info(f'DB shelved to {DTG_SHELF}')
 
 
 # async def shelf_db():
@@ -66,30 +64,30 @@ async def shelf_db():
 #     logger.info("db shelved")
 
 
-frontend_reload = "--reload" in sys.argv
+frontend_reload = '--reload' in sys.argv
 if frontend_reload:
     app = dev_fastapi_app(lifespan=lifespan)
 else:
     app = FastAPI(lifespan=lifespan)
 
-app.include_router(forms_router, prefix="/api/forms")
-app.include_router(eps_router, prefix="/api/eps")
-app.include_router(guru_router, prefix="/api/guru")
-app.include_router(red_router, prefix="/api/red")
+app.include_router(forms_router, prefix='/api/forms')
+app.include_router(eps_router, prefix='/api/eps')
+app.include_router(guru_router, prefix='/api/guru')
+app.include_router(red_router, prefix='/api/red')
 
-app.include_router(main_router, prefix="/api")
+app.include_router(main_router, prefix='/api')
 
 
-@app.get("/robots.txt", response_class=PlainTextResponse)
+@app.get('/robots.txt', response_class=PlainTextResponse)
 async def robots_txt() -> str:
-    return "User-agent: *\nAllow: /"
+    return 'User-agent: *\nAllow: /'
 
 
-@app.get("/favicon.ico", status_code=404, response_class=PlainTextResponse)
+@app.get('/favicon.ico', status_code=404, response_class=PlainTextResponse)
 async def favicon_ico() -> str:
-    return "page not found"
+    return 'page not found'
 
 
-@app.get("/{path:path}")
+@app.get('/{path:path}')
 async def html_landing() -> HTMLResponse:
-    return HTMLResponse(prebuilt_html(title="DecodeTheBot"))
+    return HTMLResponse(prebuilt_html(title='DecodeTheBot'))
