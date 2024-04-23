@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Episodes</title>
+    <link href="{{ url_for('static', path='/styles.css') }}" rel="stylesheet">
+    <script src="https://unpkg.com/htmx.org@1.9.11"></script>
+
+</head>
+<body>
+
+<div class="main-div">
+    {% include 'episode_search.html' %}
+    {#    {% include 'nav.html' %}#}
+</div>
+
+</body>
+</html>

@@ -1,0 +1,10 @@
+{% for episode in episodes %}
+    <article class="episode">
+        <h3 class="result-title">
+            <a href="{{ episode.slug }}"> {{ episode.number }} - {{ episode.title }}</a>
+        </h3>
+        {% if episode.notes %}
+            <div class="result-notes">{{ episode.notes[0] }}</div>
+        {% endif %}
+    </article>
+{% endfor %}

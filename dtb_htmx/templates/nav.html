@@ -1,0 +1,7 @@
+<ul id="episodes-nav">
+    {% for episode in episodes %}
+        <li>
+            <a href="{{ episode.slug }}">{{ episode.title }}</a>
+        </li>
+    {% endfor %}
+</ul>

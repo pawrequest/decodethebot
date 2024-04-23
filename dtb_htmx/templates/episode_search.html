@@ -1,0 +1,68 @@
+{#<div hx-get="/get_eps/" hx-target="#search-results" hx-trigger="load">#}
+{#</div>#}
+
+<div class="search">
+    <div>
+        <span>Filter By Title</span>
+        <form>
+            <div class="form-input">
+                <input type="hidden" name="search_kind" value="title">
+                <input class="form-control" type="search"
+
+                       name="search_str" placeholder="Begin Typing To Filter..."
+                       hx-post="/get_eps/"
+                       hx-trigger="input changed delay:500ms, search"
+                       hx-target="#search-results">
+            </div>
+        </form>
+    </div>
+
+    <div>
+        <span>Filter By Guru</span>
+        <form>
+            <div class="form-input">
+                <input type="hidden" name="search_kind" value="guru">
+                <input class="form-control" type="search"
+                       name="search_str" placeholder="Begin Typing To Filter..."
+                       hx-post="/get_eps/"
+                       hx-trigger="input changed delay:500ms, search"
+                       hx-target="#search-results">
+            </div>
+        </form>
+    </div>
+
+    <div>
+        <span>Filter By Notes</span>
+        <form>
+            <div class="form-input">
+                <input type="hidden" name="search_kind" value="notes">
+                <input class="form-control" type="search"
+                       name="search_str" placeholder="Begin Typing To Filter..."
+                       hx-post="/get_eps/"
+                       hx-trigger="input changed delay:500ms, search"
+                       hx-target="#search-results">
+            </div>
+        </form>
+    </div>
+
+</div>
+<div id="search-results" class="episodes" hx-get="/get_eps/" hx-trigger="load" hx-target="this"></div>
+
+{#    <div class="search-select">#}
+{#        <h2 class="search-control">#}
+{#            <span>Filter By Title</span>#}
+{#            <form hx-post="/get_eps/" hx-target="#search-results" hx-trigger="input changed delay:500ms, search">#}
+{#                <input type="hidden" name="search_kind" value="title">#}
+{#                <input class="form-control" type="search" name="search_str" placeholder="Begin Typing To Filter...">#}
+{#            </form>#}
+{#            <span>Filter By Guru</span>#}
+{#            <form hx-post="/get_eps/" hx-target="#search-results" hx-trigger="input changed delay:500ms, search">#}
+{#                <input type="hidden" name="search_kind" value="guru">#}
+{#                <input class="form-control" type="search" name="search_str" placeholder="Begin Typing To Filter...">#}
+{#            </form>#}
+{#        </h2>#}
+{#    </div>#}
+{#    <div id="search-results" class="episodes"></div>#}
+
+
+

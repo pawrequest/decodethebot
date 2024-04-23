@@ -1,0 +1,110 @@
+.body {
+    /*align-items: center;*/
+
+    /*justify-content: center;*/
+    align-content: center;
+}
+
+.main-div {
+    /*width: min(80%, 90rem);*/
+    display: grid;
+    grid-auto-flow: column;
+}
+
+
+.search {
+    font-size: 2rem;
+}
+
+.search > * {
+    display: grid;
+    grid-auto-flow: row;
+}
+
+.episodes {
+    display: flex;
+    flex-direction: row;
+
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.episodes > * {
+    flex: 1 1 15%;
+}
+
+/*@media screen and (min-width: 900px) {*/
+/*    .episodes {*/
+/*        !*display: grid;*!*/
+/*        !*grid-auto-flow: row;*!*/
+/*        !*grid-template-columns: repeat(5, 1fr);*!*/
+/*        !*gap: 1rem;*!*/
+/*    }*/
+/*}*/
+
+
+.episode {
+    text-align: center;
+    background-color: cornflowerblue;
+    border-radius: 1rem;
+    padding: 1em;
+    /*padding-bottom: 2em;*/
+    box-shadow: 1em 1em 1em;
+    cursor: pointer;
+}
+
+.episode:focus,
+.episode:hover {
+    background: bisque;
+}
+
+.episode-link {
+    display: block;
+    height: 100%;
+    width: 100%;
+    text-decoration: none;
+    /*opacity: 0;*/
+    /*background: red;*/
+    /*z-index: 10;*/
+}
+
+.episode-notes {
+    /*padding-top: 1em;*/
+    display: -webkit-box;
+    -webkit-line-clamp: 10;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.episode-number {
+    display: none;
+    text-align: end;
+    vertical-align: bottom;
+}
+
+.episode-title {
+    /*height: 30%;*/
+    background: aquamarine;
+    border-radius: .5rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    min-height: 4lh;
+    /*padding-top: .5em;*/
+    /*margin: .5em;*/
+
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    /*vertical-align: center;*/
+
+    > a {
+        color: red;
+        padding: 1em;
+        text-align: center;
+    }
+
+}
+
+.form-input {
+
+}
+
