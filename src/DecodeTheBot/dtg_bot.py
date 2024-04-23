@@ -32,6 +32,15 @@ class DTG:
             reddit_q: Queue | None = None,
             http_session: ClientSession | None = None,
     ):
+        """Decoding The Gurus Bot
+
+        Attributes:
+            subreddit (Subreddit): Subreddit to monitor
+            sqm_session (sqlmodel.Session): Session to use for database operations
+            episode_q (Queue): Episode Queue
+            reddit_q (Queue): Reddit Thread Queue
+            http_session (ClientSession): Aiohttp session
+        """
         self.subreddit = subreddit
 
         self.sqm_session: sqm.Session = sqm_session or sqm.Session(database.engine_())
@@ -45,6 +54,7 @@ class DTG:
     async def from_env(
             cls,
     ) -> 'DTG':
+        """Initialise DTG Bot from environment variables"""
         with sqm.Session(database.engine_()) as sqmsesh:
             async with ClientSession() as http_session:
                 # noinspection PyArgumentList pycharm_bug
@@ -59,6 +69,10 @@ class DTG:
                         await http_session.close()
 
     async def run(self):
+        """Run the bot
+
+        spawn queue managers and processors for episodes and reddit threads
+        """
         logger.info('Initialised')
         with self.sqm_session as session:
             gurus_from_file(session, consts.GURU_NAMES_FILE)
@@ -88,6 +102,7 @@ class DTG:
 
     @pawsync.quiet_cancel
     async def kill(self):
+        """Kill the bot"""
         logger.info('Killing')
         for task in self.tasks:
             task.cancel()
@@ -95,6 +110,7 @@ class DTG:
 
     @pawsync.quiet_cancel
     async def episode_q_manager(self):
+        """Manage episode scraping"""
         while True:
             try:
                 await self.get_episodes()
@@ -108,6 +124,7 @@ class DTG:
             await asyncio.sleep(consts.SCRAPER_SLEEP)
 
     async def get_episodes(self, max_dupes: int = consts.MAX_DUPES):
+        """Get episodes from the podcast feed and add them to the episode queue"""
         dupes = 0
         async for ep_ in dtg.get_episodes_blind(
                 base_url=consts.PODCAST_URL,
@@ -126,6 +143,7 @@ class DTG:
 
     @pawsync.quiet_cancel
     async def reddit_q_manager(self):
+        """Manage Reddit Thread Scraping"""
         while True:
             try:
                 await self.get_reddit_threads()
@@ -138,7 +156,12 @@ class DTG:
             logger.debug(f'RedditBot Sleeping for {consts.REDDIT_SLEEP} seconds', category='reddit')
             await asyncio.sleep(consts.REDDIT_SLEEP)
 
-    async def get_reddit_threads(self, max_dupes: int = consts.MAX_DUPES):
+    async def get_reddit_threads(self, max_dupes: int = consts.MAX_DUPES) -> None:
+        """Get Reddit Threads from the subreddit and add them to the reddit queue
+
+        Args:
+            max_dupes (int): Maximum number of duplicate threads to allow before sleeping
+        """
         dupes = 0
         async for sub in self.subreddit.stream.submissions(skip_existing=False):
             thread = reddit_m.RedditThread.from_submission(sub)
@@ -159,6 +182,14 @@ class DTG:
             relation_classes: list[type(_p.BaseModel)],
             log_category: str = 'General',
     ):
+        """Process items from the queue
+
+        Args:
+            queue (Queue): Queue to process
+            model_class (type): Model class to validate
+            relation_classes (list[type]): List of related classed to check for matches
+            log_category (str): organise log entries into categories
+        """
         while True:
             item_ = await queue.get()
             item = model_class.model_validate(item_)
@@ -175,6 +206,7 @@ class DTG:
             logger.info(f'Processed {item_str}', category=log_category)
 
     async def assign_rel(self, item, relation_class):
+        """Add related items to the item"""
         related_items = db_obj_matches(self.sqm_session, item, relation_class)
         alias = alias_generators.to_snake(relation_class.__name__) + 's'
         getattr(item, alias).extend(related_items)
@@ -219,6 +251,17 @@ class DTG:
 def db_obj_matches(
         session: sqm.Session, obj: DB_MODEL_TYPE, model: type(DB_MODEL_VAR)
 ) -> list[DB_MODEL_VAR]:
+    """Get matching objects from the database
+
+    Args:
+        session (sqlmodel.Session): Database session
+        obj (DB_MODEL_TYPE): Object to match
+        model (type): Model to match against
+
+    Returns:
+        list: List of matching objects
+
+    """
     if isinstance(obj, model):
         return []
     db_objs = session.exec(sqm.select(model)).all()
@@ -232,12 +275,23 @@ def db_obj_matches(
     return matched_tag_models
 
 
-def one_in_other(obj: DB_MODEL_VAR, obj_var: str, compare_val: str):
+def one_in_other(obj: DB_MODEL_VAR, obj_var: str, compare_val: str) -> bool:
+    """Check if one string is in another
+
+    Args:
+        obj (DB_MODEL_VAR): Object to check
+        obj_var (str): Attribute to check
+        compare_val (str): Value to compare
+
+    Returns:
+        bool: True if one string is in the other
+    """
     ob_low = getattr(obj, obj_var).lower()
     return ob_low in compare_val.lower() or compare_val.lower() in ob_low
 
 
 def gurus_from_file(session, infile):
+    """Add gurus from a file to the database"""
     with open(infile) as f:
         guru_names = f.read().split(',')
     session_gurus = session.exec(sqm.select(guru_m.Guru.name)).all()
