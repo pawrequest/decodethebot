@@ -19,11 +19,25 @@ dependencies = [
     "fastui",
     "scrapaw",
     "suppawt",
+    "httpx",
+    "pydantic-settings",
+
 ]
 [project.optional-dependencies]
 git = [
-    "scraper @ git+https://github.com/pawrequest/scraper",
+    "scrapaw @ git+https://github.com/pawrequest/scrapaw",
     "suppawt @ git+https://github.com/pawrequest/suppawt",
+]
+dev = [
+    "pytest-asyncio",
+    'autodoc_pydantic',
+    "pytest",
+    "sphinx",
+    "sphinx-autodoc-typehints",
+    "sphinx-rtd-theme",
+    "sphinx-readme",
+    "sphinx_rtd_dark_mode",
+    "myst-parser",
 ]
 
 [build-system]
@@ -31,10 +45,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.rye]
-managed = true
+managed = false
 dev-dependencies = [
     "pytest-asyncio",
-    "httpx",
     'autodoc_pydantic',
     "pytest",
     "sphinx",
