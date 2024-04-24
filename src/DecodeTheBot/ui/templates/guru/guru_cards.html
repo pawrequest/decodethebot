@@ -1,6 +1,6 @@
 {% for guru in gurus %}
-    <article class="guru">
-        <a href={{ guru.slug }}>
+    <article class="card">
+        <a href="{{ guru.slug }}" class="simple-link">
             <div class="guru-name">{{ guru.name }}</div>
             {% if guru.episodes %}
                 <div class="guru-episodes">

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Episodes</title>
-    <link href="{{ url_for('static', path='/ep_styles.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', path='/styles.css') }}" rel="stylesheet">
     <script src="https://unpkg.com/htmx.org@1.9.11"></script>
 
 </head>
@@ -55,7 +55,7 @@
         </div>
 
     </div>
-    <div id="search-results" class="episodes" hx-get="/eps/get_eps/" hx-trigger="load" hx-target="this"></div>
+    <div id="search-results" class="cards" hx-get="/eps/get_eps/" hx-trigger="load" hx-target="this"></div>
 
 </div>
 

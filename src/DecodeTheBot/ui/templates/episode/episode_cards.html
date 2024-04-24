@@ -1,18 +1,15 @@
 {% for episode in episodes %}
-    <article class="episode" onclick={{ episode.slug }}>
-        <div class="episode-title">{{ episode.title }}</div>
-        {% if episode.notes %}
-            <div class="episode-notes">
-                {% for note in episode.notes %}
-                    <p>{{ note }}</p>
-                {% endfor %}
-            </div>
-        {% endif %}
-        {#        {% if episode.notes %}#}
-        {#            <div class="episode-notes">{{ '\n\n'.join(episode.notes) }}</div>#}
-        {#        {% endif %}#}
-        <p class="episode-number">{{ episode.number }} </p>
-        <a href="{{ episode.slug }}" class="episode-link"></a>
-
+    <article class="card">
+        <a href="{{ episode.slug }}" class="simple-link">
+            <div class="guru-name">{{ episode.title }}</div>
+            {% if episode.notes %}
+                <div class="guru-episodes">
+                    {% for note in episode.notes %}
+                        <p>{{ note }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+{#            <p class="episode-number">{{ episode.number }} </p>#}
+        </a>
     </article>
 {% endfor %}
