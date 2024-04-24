@@ -8,6 +8,9 @@ authors = [
 readme = "README.md"
 requires-python = ">= 3.12"
 dependencies = [
+    "suppawt",
+    "scrapaw",
+
     'asyncpraw',
     'sqlmodel',
     "uvicorn[standard]",
@@ -17,10 +20,9 @@ dependencies = [
     "aiohttp",
     "loguru",
     "fastui",
-    "scrapaw",
-    "suppawt",
     "httpx",
     "pydantic-settings",
+    'python-multipart',
 
 ]
 [project.optional-dependencies]

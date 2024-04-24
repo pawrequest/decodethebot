@@ -1,10 +1,9 @@
 import datetime as dt
-from typing import List
 
 from fastui import components as c, events
-
 import scrapaw
 from pawdantic.pawui import builders, styles
+
 from . import guru_m, reddit_m
 
 
@@ -36,12 +35,12 @@ class EpisodeOut(scrapaw.EpisodeBase):
     links: dict[str, str]
     number: str
 
-    gurus: List[guru_m.GuruBase]
-    reddit_threads: List[reddit_m.RedditThreadBase]
+    gurus: list[guru_m.GuruBase]
+    reddit_threads: list[reddit_m.RedditThreadBase]
 
     @property
     def slug(self):
-        return f"/eps/{self.id}"
+        return f'/eps/{self.id}'
 
     def fastui_detail_view(self) -> c.Div:
         return builders.wrap_divs(
@@ -66,8 +65,8 @@ class EpisodeOut(scrapaw.EpisodeBase):
 
 class GuruOut(guru_m.GuruBase):
     id: int
-    episodes: List[scrapaw.EpisodeBase]
-    reddit_threads: List[reddit_m.RedditThreadBase]
+    episodes: list[scrapaw.EpisodeBase]
+    reddit_threads: list[reddit_m.RedditThreadBase]
 
     def fastui_col_basic(self) -> c.Div:
         return builders.wrap_divs(
@@ -76,7 +75,6 @@ class GuruOut(guru_m.GuruBase):
             ],
             class_name=styles.COL_STYLE,
             inner_class_name=styles.ROW_STYLE,
-
         )
 
 

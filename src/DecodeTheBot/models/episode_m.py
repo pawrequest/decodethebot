@@ -18,9 +18,7 @@ class Episode(EpisodeBase, sqm.SQLModel, table=True):
     notes: list[str] = Field(default_factory=list, sa_column=sqm.Column(sqa.JSON))
     id: int | None = Field(default=None, primary_key=True)
     gurus: list['Guru'] = Relationship(back_populates='episodes', link_model=GuruEpisodeLink)
-    reddit_threads: list['RedditThread'] = Relationship(
-        back_populates='episodes', link_model=RedditThreadEpisodeLink
-    )
+    reddit_threads: list['RedditThread'] = Relationship(back_populates='episodes', link_model=RedditThreadEpisodeLink)
 
     @property
     def slug(self):

@@ -5,18 +5,18 @@ from fastapi import APIRouter, Depends
 from sqlmodel import Session
 from loguru import logger
 from pydantic import BaseModel, Field
+from pawdantic.pawui import builders, from_dtg
 
-from DecodeTheBot.core.consts import PAGE_SIZE
 from DecodeTheBot.core.database import get_session
+from DecodeTheBot.guru_config import guru_settings
 from DecodeTheBot.models import responses
 from DecodeTheBot.models.guru_m import Guru
 from DecodeTheBot.ui.dtg_ui import dtg_default_page
-from pawdantic.pawui import builders, from_dtg
 
 router = APIRouter()
 
 
-@router.get("/{guru_id}", response_model=FastUI, response_model_exclude_none=True)
+@router.get('/{guru_id}', response_model=FastUI, response_model_exclude_none=True)
 async def guru_view(guru_id: int, session: Session = Depends(get_session)) -> list[AnyComponent]:
     guru_ = session.get(Guru, guru_id)
     guru = responses.GuruOut.model_validate(guru_)
@@ -30,9 +30,11 @@ async def guru_view(guru_id: int, session: Session = Depends(get_session)) -> li
     )
 
 
-@router.get("/", response_model=FastUI, response_model_exclude_none=True)
+@router.get('/', response_model=FastUI, response_model_exclude_none=True)
 def guru_list_view(page: int = 1, session: Session = Depends(get_session)) -> list[AnyComponent]:
-    logger.info("guru list view")
+    logger.info('guru list view')
+    g_sett = guru_settings()
+    page_size = g_sett.page_size
 
     data = session.query(Guru).all()
     data = [_ for _ in data if _.episodes or _.reddit_threads]
@@ -41,14 +43,14 @@ def guru_list_view(page: int = 1, session: Session = Depends(get_session)) -> li
     #     return empty_page()
     total = len(data)
 
-    data = data[(page - 1) * PAGE_SIZE : page * PAGE_SIZE]
+    data = data[(page - 1) * page_size : page * page_size]
 
     try:
         return dtg_default_page(
-            title="Gurus",
+            title='Gurus',
             components=[
                 from_dtg.objects_ui_with(data),
-                c.Pagination(page=page, page_size=PAGE_SIZE, total=total),
+                c.Pagination(page=page, page_size=page_size, total=total),
             ],
         )
 
@@ -61,8 +63,8 @@ class EpisodeGuruFilter(BaseModel):
     guru_name: str = Field(
         # json_schema_extra={"search_url": "/api/forms/episodes/", "placeholder": "Filter by Guru..."}
         json_schema_extra={
-            "search_url": "/api/forms/search/episodes/",
-            "placeholder": "Filter by Guru...",
+            'search_url': '/api/forms/search/episodes/',
+            'placeholder': 'Filter by Guru...',
         }
     )
 
@@ -70,19 +72,19 @@ class EpisodeGuruFilter(BaseModel):
 class ThreadGuruFilter(BaseModel):
     guru_name: str = Field(
         json_schema_extra={
-            "search_url": "/api/forms/search/reddit_threads/",
-            "placeholder": "Filter by Guru...",
+            'search_url': '/api/forms/search/reddit_threads/',
+            'placeholder': 'Filter by Guru...',
         }
     )
 
 
-def guru_filter(filter_form_initial, model: Literal["episodes", "reddit_threads"]):
-    filter_model = EpisodeGuruFilter if model == "episodes" else ThreadGuruFilter
+def guru_filter(filter_form_initial, model: Literal['episodes', 'reddit_threads']):
+    filter_model = EpisodeGuruFilter if model == 'episodes' else ThreadGuruFilter
     return c.ModelForm(
         model=filter_model,
-        submit_url=".",
+        submit_url='.',
         initial=filter_form_initial,
-        method="GOTO",
+        method='GOTO',
         submit_on_change=True,
-        display_mode="inline",
+        display_mode='inline',
     )

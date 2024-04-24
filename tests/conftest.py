@@ -11,7 +11,6 @@ import re
 from random import randint
 
 import pytest
-from episode_scraper.episode_model import EpisodeBase
 from loguru import logger as _logger
 
 # from sqlalchemy import create_engine
@@ -28,37 +27,37 @@ from loguru import logger as _logger
 # from main import app
 #
 from asyncpraw import Reddit
-from suppawt import get_logger
+from suppawt.pawlogger.config_loguru import get_loguru
 from sqlalchemy import StaticPool, create_engine
 from sqlmodel import SQLModel, Session
-
-from src.DecodeTheBot.dtg_bot import gurus_from_file
-from src.DecodeTheBot.core.consts import BACKUP_JSON, GURU_NAMES_FILE
-from src.DecodeTheBot.models.episode import Episode  # noqa F401
 from src.DecodeTheBot.models.guru import Guru  # noqa F401
 from src.DecodeTheBot.models.reddit_ext import RedditThread  # noqa F401
 
+from DecodeTheBot.models.episode_m import Episode
+from src.DecodeTheBot.dtg_bot import gurus_from_file
+from src.DecodeTheBot.core.consts import BACKUP_JSON, GURU_NAMES_FILE
 
-@pytest.fixture(scope="session")
+
+@pytest.fixture(scope='session')
 def test_session():
-    engine = create_engine("sqlite:///:memory:")
+    engine = create_engine('sqlite:///:memory:')
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
         yield session
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope='session')
 def test_session_with_gurus(test_session):
     gurus_from_file(test_session, GURU_NAMES_FILE)
     yield test_session
 
 
-MAIN_URL = "https://decoding-the-gurus.captivate.fm"
+MAIN_URL = 'https://decoding-the-gurus.captivate.fm'
 
-TEST_DB = "sqlite://"
+TEST_DB = 'sqlite://'
 ENGINE = create_engine(
     TEST_DB,
-    connect_args={"check_same_thread": False},
+    connect_args={'check_same_thread': False},
     poolclass=StaticPool,
 )
 
@@ -66,7 +65,7 @@ ENGINE = create_engine(
 async def override_subreddit():
     try:
         reddit = Reddit()
-        subreddit = await reddit.subreddit("test")
+        subreddit = await reddit.subreddit('test')
         yield subreddit
     finally:
         await reddit.close()
@@ -100,23 +99,19 @@ def override_logger():
 #
 # @pytest.fixture(scope="function")
 def test_logger(tmp_path):
-    logger = get_logger("local")
+    logger = get_loguru('local')
     logger.remove()
-    test_loc = tmp_path / "test.log"
+    test_loc = tmp_path / 'test.log'
     logger.add(test_loc)
-    logger.info("test")
+    logger.info('test')
     logged_line = inspect.getframeinfo(inspect.currentframe()).lineno - 1
-    with open(test_loc, "r") as f:
+    with open(test_loc) as f:
         LOG1 = f.readline()
-    pat_xml = (
-        r"^(\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}\.\d{3}\s)\|(\s[A-Z]*\s*)\|(\s.+:.+:\d+\s-\s.*)$"
-    )
+    pat_xml = r'^(\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}\.\d{3}\s)\|(\s[A-Z]*\s*)\|(\s.+:.+:\d+\s-\s.*)$'
     match = re.match(pat_xml, LOG1)
 
     assert match
-    assert match.string.endswith(
-        f" | INFO     | DecodeTheBot.tests.conftest:test_logger:{logged_line} - test\n"
-    )
+    assert match.string.endswith(f' | INFO     | DecodeTheBot.tests.conftest:test_logger:{logged_line} - test\n')
 
     # yield logger
 
@@ -132,15 +127,15 @@ def test_logger(tmp_path):
 #     return res
 #
 #
-@pytest.fixture(scope="session")
+@pytest.fixture(scope='session')
 def all_episodes_json():
-    with open(BACKUP_JSON, "r") as f:
-        res = json.load(f)["episode"]
+    with open(BACKUP_JSON) as f:
+        res = json.load(f)['episode']
         return [json.loads(_) for _ in res]
 
 
 #
-@pytest.fixture(scope="function")
+@pytest.fixture(scope='function')
 def random_episode(all_episodes_json):
     res = all_episodes_json[randint(0, len(all_episodes_json) - 1)]
     return Episode.model_validate(res)
@@ -166,7 +161,7 @@ async def test_ep_json(random_episode):
 #     return [EpisodeBase.model_validate(_) for _ in weird]
 #
 #
-@pytest.fixture(scope="session")
+@pytest.fixture(scope='session')
 def test_db():
     SQLModel.metadata.create_all(ENGINE)
 
@@ -179,18 +174,18 @@ def test_db():
 
 #
 #
-@pytest.fixture(scope="function")
+@pytest.fixture(scope='function')
 def blank_test_db(test_db):
-    EpisodeBase.metadata.drop_all(bind=ENGINE)
     Episode.metadata.drop_all(bind=ENGINE)
-    EpisodeBase.metadata.create_all(bind=ENGINE)
+    Episode.metadata.drop_all(bind=ENGINE)
+    Episode.metadata.create_all(bind=ENGINE)
     Episode.metadata.create_all(bind=ENGINE)
     yield
 
 
 #
 #
-@pytest.fixture(scope="module")
+@pytest.fixture(scope='module')
 def markup_sample():
     return """# Interview with Daniël Lakens and Smriti Mehta on the state of Psychology
 

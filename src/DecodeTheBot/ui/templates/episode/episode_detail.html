@@ -15,8 +15,7 @@
 
     <h3>Featured Gurus</h3>
     {% for guru in episode.gurus %}
-        <p>{{ guru.name }}</p>
-        <a href={{ guru.slug }}> Details</a>
+        <a href={{ guru.slug }}> {{ guru.name }}</a>
     {% endfor %}
 
     <h3>Related Reddit Threads</h3>

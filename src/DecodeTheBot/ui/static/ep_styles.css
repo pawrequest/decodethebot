@@ -6,9 +6,10 @@
 }
 
 .main-div {
-    /*width: min(80%, 90rem);*/
+    width: min(80%, 90rem);
     display: grid;
     grid-auto-flow: column;
+
 }
 
 
@@ -21,17 +22,18 @@
     grid-auto-flow: row;
 }
 
+
 .episodes {
     display: flex;
     flex-direction: row;
-
     flex-wrap: wrap;
-    gap: 1rem;
+    gap: 2em;
 }
 
 .episodes > * {
     flex: 1 1 15%;
 }
+
 
 /*@media screen and (min-width: 900px) {*/
 /*    .episodes {*/

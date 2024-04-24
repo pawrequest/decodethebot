@@ -1,40 +1,49 @@
 import asyncio
-import sys
 from contextlib import asynccontextmanager
 import shelve
+from pathlib import Path
 
 import sqlmodel
 from fastapi import FastAPI
-from fastui import prebuilt_html
-from fastui.dev import dev_fastapi_app
-from fastapi.responses import HTMLResponse, PlainTextResponse
+from fastapi.responses import PlainTextResponse
+from loguru import logger
+from starlette.responses import HTMLResponse, RedirectResponse
+from starlette.staticfiles import StaticFiles
+from starlette.templating import Jinja2Templates
 
 from . import dtg_types
 from .core import database
-from .core.consts import logger
-from .routers.eps import router as eps_router
-from .routers.guroute import router as guru_router
-from .routers.main import router as main_router
-from .routers.red import router as red_router
-from .routers.forms import router as forms_router
+from .guru_config import GuruConfig, guru_settings
+from .dtb_htmx.episode_route import router as ep_router
+from .dtb_htmx.guru_route import router as guru_router
 from .dtg_bot import DTG
 
-DTG_SHELF = r'C:\Users\RYZEN\prdev\workbench\dtg_bot.shelf'
+THIS_DIR = Path(__file__).resolve().parent
 
 
-#
-# envloc = os.environ.get('GURU_ENV')
-# load_dotenv(envloc)
+def db_from_shelf(session: sqlmodel.Session, settings: GuruConfig = guru_settings()):
+    with shelve.open(str(settings.guru_shelf)) as shelf:
+        episodes = shelf.get('episode')
+        gurus = shelf.get('guru')
+    episodes = sorted(episodes, key=lambda x: x.date, reverse=True)
+    gurus = sorted(gurus, key=lambda x: x.id)
+    session.add_all(episodes)
+    session.add_all(gurus)
+    session.commit()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # noinspection PyArgumentList
-    async with DTG.from_env() as dtg:
+    async with DTG() as dtg:
         try:
             database.create_db()
+
             with sqlmodel.Session(database.engine_()) as session:
-                database.trim_db(session)
+                if dtg.g_settings.restore_from_shelf:
+                    db_from_shelf(session)
+                if dtg.g_settings.trim_db:
+                    database.trim_db(session)
             logger.info('tables created')
             main_task = asyncio.create_task(dtg.run())
             yield
@@ -47,14 +56,14 @@ async def lifespan(app: FastAPI):
 
 
 async def shelf_db():
+    g_sett = guru_settings()
     with sqlmodel.Session(database.engine_()) as session:
-        with shelve.open(DTG_SHELF) as shelf:
+        with shelve.open(g_sett.guru_shelf) as shelf:
             for model_name, mapping in dtg_types.models_map.items():
                 result = session.exec(sqlmodel.select(mapping.db_model))
-                outputs = [mapping.output.model_validate(_, from_attributes=True) for _ in
-                           result.all()]
+                outputs = [mapping.output.model_validate(_, from_attributes=True) for _ in result.all()]
                 shelf[model_name] = outputs
-    logger.info(f'DB shelved to {DTG_SHELF}')
+    logger.info(f'DB shelved to {g_sett.guru_shelf}')
 
 
 # async def shelf_db():
@@ -65,18 +74,12 @@ async def shelf_db():
 #     logger.info("db shelved")
 
 
-frontend_reload = '--reload' in sys.argv
-if frontend_reload:
-    app = dev_fastapi_app(lifespan=lifespan)
-else:
-    app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan)
+app.mount('/static', StaticFiles(directory=THIS_DIR / 'ui/static'), name='static')
+templates = Jinja2Templates(directory='/ui/templates')
 
-app.include_router(forms_router, prefix='/api/forms')
-app.include_router(eps_router, prefix='/api/eps')
-app.include_router(guru_router, prefix='/api/guru')
-app.include_router(red_router, prefix='/api/red')
-
-app.include_router(main_router, prefix='/api')
+app.include_router(ep_router, prefix='/eps')
+app.include_router(guru_router, prefix='/guru')
 
 
 @app.get('/robots.txt', response_class=PlainTextResponse)
@@ -89,6 +92,7 @@ async def favicon_ico() -> str:
     return 'page not found'
 
 
-@app.get('/{path:path}')
-async def html_landing() -> HTMLResponse:
-    return HTMLResponse(prebuilt_html(title='DecodeTheBot'))
+@app.get('/', response_class=HTMLResponse)
+async def index():
+    logger.info('index')
+    return RedirectResponse(url='/eps/')

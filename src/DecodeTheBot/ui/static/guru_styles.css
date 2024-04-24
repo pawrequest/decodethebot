@@ -1,0 +1,99 @@
+.body {
+    /*align-items: center;*/
+
+    /*justify-content: center;*/
+    align-content: center;
+}
+
+.main_div {
+    width: min(80%, 90rem);
+    display: grid;
+    grid-auto-flow: column;
+}
+
+
+.search {
+    font-size: 2rem;
+}
+
+.search > * {
+    display: grid;
+    grid-auto-flow: row;
+}
+
+.gurus {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.gurus > article {
+    flex: 1 1 15%;
+}
+
+/*@media screen and (min-width: 900px) {*/
+/*    .episodes {*/
+/*        !*display: grid;*!*/
+/*        !*grid-auto-flow: row;*!*/
+/*        !*grid-template-columns: repeat(5, 1fr);*!*/
+/*        !*gap: 1rem;*!*/
+/*    }*/
+/*}*/
+
+
+.guru {
+    text-align: center;
+    background-color: cornflowerblue;
+    border-radius: 1rem;
+    padding: 1em;
+    /*padding-bottom: 2em;*/
+    box-shadow: 1em 1em 1em;
+    cursor: pointer;
+}
+
+.guru:focus,
+.guru:hover {
+    background: bisque;
+}
+
+.guru {
+    text-align: center;
+    background-color: cornflowerblue;
+    border-radius: 1rem;
+    padding: 1em;
+    /*padding-bottom: 2em;*/
+    box-shadow: 1em 1em 1em;
+    cursor: pointer;
+    min-height: 10rem
+}
+
+.guru-episodes {
+    display: grid;
+    grid-auto-flow: row;
+    gap: 1rem;
+}
+
+.guru-name {
+    /*height: 30%;*/
+    background: aquamarine;
+    border-radius: .5rem;
+    display: -webkit-box;
+
+    /*padding-top: .5em;*/
+    /*margin: .5em;*/
+
+    /*vertical-align: center;*/
+
+    > a {
+        color: red;
+        padding: 1em;
+        text-align: center;
+    }
+
+}
+
+.form-input {
+
+}
+

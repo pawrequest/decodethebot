@@ -4,9 +4,11 @@
 E           sqlalchemy.exc.InvalidRequestError: When initializing mapper Mapper[Guru(guru)], expression "relationship("List['Episode']")" seems to be using a generic class as the argument to relationship(); please state the generic argument using an annotation, e.g. "episodes: Mapped[List['Episode']] = relationship()"
 
 """
-from typing import List, Optional, TYPE_CHECKING
+from functools import cached_property
+from typing import ClassVar, TYPE_CHECKING
 
 import sqlmodel
+from pydantic import computed_field
 from sqlmodel import Field, Relationship, SQLModel
 import sqlalchemy as sa
 
@@ -21,25 +23,21 @@ class GuruBase(SQLModel):
     name: str = Field(index=True, unique=True)
     notes: list[str] | None = Field(default_factory=list)
 
-    @property
-    def slug(self):
-        return f"/guru/{self.id}"
-
 
 class Guru(GuruBase, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     notes: list[str] | None = Field(default_factory=list, sa_column=sqlmodel.Column(sa.JSON))
 
-    episodes: List["Episode"] = Relationship(back_populates="gurus", link_model=GuruEpisodeLink)
+    episodes: list['Episode'] = Relationship(back_populates='gurus', link_model=GuruEpisodeLink)
 
-    reddit_threads: List["RedditThread"] = Relationship(
-        back_populates="gurus", link_model=RedditThreadGuruLink
-    )
+    reddit_threads: list['RedditThread'] = Relationship(back_populates='gurus', link_model=RedditThreadGuruLink)
 
-    @classmethod
-    def rout_prefix(cls):
-        return "/guru/"
+    rout_prefix: ClassVar[str] = 'guru'
 
-    @property
-    def interest(self):
+    @cached_property
+    def slug(self):
+        return f'/{self.__class__.rout_prefix}/{self.id}'
+
+    @computed_field
+    def interest(self) -> int:
         return len(self.episodes) + len(self.reddit_threads)
