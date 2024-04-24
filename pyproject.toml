@@ -12,6 +12,7 @@ dependencies = [
     "scrapaw",
     "pawdantic",
 
+    'python-multipart',
     'asyncpraw',
     'sqlmodel',
     "uvicorn[standard]",
