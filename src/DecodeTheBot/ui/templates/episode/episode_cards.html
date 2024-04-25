@@ -1,11 +1,11 @@
 {% for episode in episodes %}
     <article class="card">
         <a href="{{ episode.slug }}" class="simple-link">
-            <div class="guru-name">{{ episode.title }}</div>
+            <div class="card-title">{{ episode.title }}</div>
             {% if episode.notes %}
-                <div class="guru-episodes">
+                <div class="card-detail">
                     {% for note in episode.notes %}
-                        <p>{{ note }}</p>
+                        <p class="episode-note">{{ note }}</p>
                     {% endfor %}
                 </div>
             {% endif %}

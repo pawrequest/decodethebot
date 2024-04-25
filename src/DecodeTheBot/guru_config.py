@@ -2,7 +2,7 @@ import functools
 import os
 from pathlib import Path
 
-from pydantic import HttpUrl
+from pydantic import HttpUrl, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from suppawt.pawlogger import get_loguru
 
@@ -38,7 +38,13 @@ class GuruConfig(BaseSettings):
     guru_db: Path
     log_file: Path
     podcast_url: HttpUrl
-    guru_shelf: Path
+    backup_shelf: Path | None = None
+
+    @model_validator(mode='after')
+    def backup_shelf(self):
+        if self.backup_shelf is None:
+            self.backup_shelf = Path(self.backup_dir / 'dtg_bot.shelf')
+        return self
 
     page_size: int = 20
 

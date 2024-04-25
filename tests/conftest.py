@@ -6,7 +6,6 @@
 # import pytest
 # from asyncpraw import Reddit
 import inspect
-import json
 import re
 from random import randint
 
@@ -30,29 +29,13 @@ from asyncpraw import Reddit
 from suppawt.pawlogger.config_loguru import get_loguru
 from sqlalchemy import StaticPool, create_engine
 from sqlmodel import SQLModel, Session
-from src.DecodeTheBot.models.guru import Guru  # noqa F401
-from src.DecodeTheBot.models.reddit_ext import RedditThread  # noqa F401
 
+from DecodeTheBot.guru_config import GuruConfig, RedditConfig
 from DecodeTheBot.models.episode_m import Episode
-from src.DecodeTheBot.dtg_bot import gurus_from_file
-from src.DecodeTheBot.core.consts import BACKUP_JSON, GURU_NAMES_FILE
+from DecodeTheBot.dtg_bot import gurus_from_file
 
-
-@pytest.fixture(scope='session')
-def test_session():
-    engine = create_engine('sqlite:///:memory:')
-    SQLModel.metadata.create_all(engine)
-    with Session(engine) as session:
-        yield session
-
-
-@pytest.fixture(scope='session')
-def test_session_with_gurus(test_session):
-    gurus_from_file(test_session, GURU_NAMES_FILE)
-    yield test_session
-
-
-MAIN_URL = 'https://decoding-the-gurus.captivate.fm'
+# from src.DecodeTheBot.models.guru import Guru  # F401
+# from src.DecodeTheBot.models.reddit_ext import RedditThread  # F401
 
 TEST_DB = 'sqlite://'
 ENGINE = create_engine(
@@ -60,6 +43,30 @@ ENGINE = create_engine(
     connect_args={'check_same_thread': False},
     poolclass=StaticPool,
 )
+
+
+@pytest.fixture
+def guru_settings():
+    return GuruConfig()
+
+
+@pytest.fixture
+def reddit_settings():
+    return RedditConfig()
+
+
+@pytest.fixture(scope='session')
+def test_session():
+    engine = ENGINE
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        yield session
+
+
+@pytest.fixture(scope='session')
+def test_session_with_gurus(test_session, guru_settings):
+    gurus_from_file(test_session, guru_settings.guru_names_file)
+    yield test_session
 
 
 async def override_subreddit():
@@ -128,16 +135,15 @@ def test_logger(tmp_path):
 #
 #
 @pytest.fixture(scope='session')
-def all_episodes_json():
-    with open(BACKUP_JSON) as f:
-        res = json.load(f)['episode']
-        return [json.loads(_) for _ in res]
+def all_episodes_shelf(guru_settings):
+    with open(guru_settings.backup_shelf) as f:
+        return f
 
 
 #
 @pytest.fixture(scope='function')
-def random_episode(all_episodes_json):
-    res = all_episodes_json[randint(0, len(all_episodes_json) - 1)]
+def random_episode(all_episodes_shelf):
+    res = all_episodes_shelf[randint(0, len(all_episodes_shelf) - 1)]
     return Episode.model_validate(res)
 
 

@@ -22,7 +22,7 @@ THIS_DIR = Path(__file__).resolve().parent
 
 
 def db_from_shelf(session: sqlmodel.Session, settings: GuruConfig = guru_settings()):
-    with shelve.open(str(settings.guru_shelf)) as shelf:
+    with shelve.open(str(settings.backup_shelf)) as shelf:
         episodes = shelf.get('episode')
         gurus = shelf.get('guru')
     episodes = sorted(episodes, key=lambda x: x.date, reverse=True)
@@ -58,12 +58,12 @@ async def lifespan(app: FastAPI):
 async def shelf_db():
     g_sett = guru_settings()
     with sqlmodel.Session(database.engine_()) as session:
-        with shelve.open(g_sett.guru_shelf) as shelf:
+        with shelve.open(g_sett.backup_shelf) as shelf:
             for model_name, mapping in dtg_types.models_map.items():
                 result = session.exec(sqlmodel.select(mapping.db_model))
                 outputs = [mapping.output.model_validate(_, from_attributes=True) for _ in result.all()]
                 shelf[model_name] = outputs
-    logger.info(f'DB shelved to {g_sett.guru_shelf}')
+    logger.info(f'DB shelved to {g_sett.backup_shelf}')
 
 
 # async def shelf_db():
