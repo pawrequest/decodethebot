@@ -1,2 +1,0 @@
--e file:///C:/Users/RYZEN/prdev/suppawt
--e file:///C:/Users/RYZEN/prdev/episode_scraper

@@ -1,5 +1,6 @@
--r ./reqs_local.txt
+-r ./reqs_am.txt
 -r ./reqs_dev.txt
 fastapi
 fastui
 uvicorn
+-e .
