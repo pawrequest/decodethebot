@@ -123,6 +123,7 @@ class DTG:
         logger.debug('Getting Episodes', category='episode')
         max_dupes = max_dupes or self.g_settings.max_dupes
         dupes = 0
+        ep_count = 0
         async for ep_ in dtg.get_episodes_blind(
             base_url=str(self.g_settings.podcast_url),
             session_h=self.http_session,
@@ -135,9 +136,10 @@ class DTG:
                     logger.debug(f'Maximum duplicate episodes reached: {max_dupes}')
                     raise pod_abs.MaxDupeError('Max duplicate episodes reached')
                 continue
+            ep_count += 1
             logger.debug(f'Found Episode: {ep.title}', category='episode')
             await self.episode_q.put(ep)
-        logger.debug('Episode Queue Empty', category='episode')
+        logger.debug(f'Episode Queue Empty after adding {ep_count} New Episodes', category='episode')
 
     @pawsync.quiet_cancel
     async def reddit_q_manager(self):
