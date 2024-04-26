@@ -12,6 +12,8 @@ dependencies = [
     "scrapaw",
     "pawdantic",
 
+    "jinja2",
+
     'python-multipart',
     'asyncpraw',
     'sqlmodel',
